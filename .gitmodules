@@ -1,0 +1,6 @@
+[submodule "3rdparty/mbedtls"]
+	path = 3rdparty/mbedtls
+	url = https://github.com/Mbed-TLS/mbedtls
+[submodule "3rdparty/lwjson"]
+	path = 3rdparty/lwjson
+	url = https://github.com/MaJerle/lwjson
