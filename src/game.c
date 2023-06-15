@@ -114,8 +114,6 @@ static void readySpectators()
         }
         currentPlayer = currentPlayer->next;
     }
-    // this will brodcast to all the players
-    PlayS2Cpositionrotation(playerGetHead(), gameData.centerX, gameData.centerY + 2, gameData.centerZ);
     gameData.initalPlayers = count;
     gameData.players = count;
 }
@@ -151,8 +149,13 @@ static void startGame(size_t playerCount)
         {
             gameData.startDelay = 1000;
             gameData.isStarted = 1;
-            readySpectators();
             return;
+        }
+        if (gameData.startDelay == 500)
+        {
+            readySpectators();
+            // this will brodcast to all the players
+            PlayS2Cpositionrotation(playerGetHead(), gameData.centerX, gameData.centerY + 2, gameData.centerZ);
         }
         if ((gameData.startDelay % 100) == 0)
         {
