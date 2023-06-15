@@ -160,6 +160,17 @@ static void startGame(size_t playerCount)
         }
         gameData.startDelay--;
     }
+    else
+    {
+        // check for a deadlock
+        if ((gameData.players == 0) && gameData.initalPlayers)
+        {
+            gameData.isStarted = 0;
+            gameData.initalPlayers = 0;
+            gameData.players = 0;
+            gameData.initalPlayers = 0;
+        }
+    }
 }
 // fired when the server is about to start
 void gamePreload()
