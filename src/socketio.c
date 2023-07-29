@@ -265,15 +265,21 @@ size_t sendGlobalBuffer(player_t *player)
 void sendData(uint8_t *data, size_t buffersize)
 {
   int sock = sendPacketVars.player->player_fd;
-  size_t r;
-  if (sock >= 0)
+  size_t totalSent = 0;
+  while (totalSent < buffersize)
   {
-    r = U_send(sock, data, buffersize, MSG_NOSIGNAL);
-    if (r != buffersize)
+    size_t remaining = buffersize - totalSent;
+    size_t blockSize = remaining < MAX_SEND_FRAGMENT_SIZE ? remaining : MAX_SEND_FRAGMENT_SIZE;
+    ssize_t r = U_send(sock, (char *)data + totalSent, blockSize, MSG_NOSIGNAL);
+
+    if (r < 0)
     {
-      printl(LOG_ERROR, "could not send (%d) code %ld (%p %ld)\n", sock, r, data, buffersize);
+      printl(LOG_ERROR, "could not send (%d) code %ld (%p %ld)\n", sock, r, data, totalSent);
       sendPacketVars.player->remove_player = 1;
+      return;
     }
+
+    totalSent += r;
   }
 }
 void sendStartPlayer(player_t *player)

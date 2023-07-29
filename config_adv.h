@@ -6,6 +6,7 @@
 #define MEM_CHUNK_SIZE 512 //Allocation granularity 
 #define MEM_CHUNK_THRESHOLD 4 //Number of chunks to allocate before reallocating
 
+#define MAX_SEND_FRAGMENT_SIZE 1024 //Number of bytes to send on the wire each call
 #define MAX_STRING_SIZE 1024
 #define READBUFSIZE 4096
 
