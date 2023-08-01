@@ -398,6 +398,25 @@ void httpsFreePlayer(player_t *currentPlayer)
     {
         return;
     }
+    //TODO: make this non blocking
+    int ret = 0;
+    for (int i = 0; i < 200; i++)
+    {
+        ret = mbedtls_ssl_close_notify(&httpsData.ssl);
+        if (ret == 0)
+        {
+            break;
+        }
+        else if (ret == MBEDTLS_ERR_SSL_WANT_WRITE)
+        {
+            continue;
+        }
+        else
+        {
+            printl(LOG_WARN, "mbedtls_ssl_close_notify returned %d\n", ret);
+            break;
+        }
+    }
     mbedtls_net_free(&httpsData.net);
     mbedtls_ssl_free(&httpsData.ssl);
     mbedtls_ssl_config_free(&httpsData.conf);
