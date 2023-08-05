@@ -63,6 +63,12 @@ struct player_t
   uint8_t rotation_event : 1;
   uint8_t swing_arm_event : 1;
   uint8_t entity_action_event : 1;
+  // Packet
+  uint8_t packet_dispatch_flag : 1;
+  size_t packet_len;
+  size_t packet_sent;
+  size_t packet_timeout;
+  uint8_t *packet;
   // Chunk
   int32_t chunk_x, chunk_z, chunk_px, chunk_pz;
   // Chat

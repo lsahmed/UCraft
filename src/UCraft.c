@@ -337,7 +337,43 @@ static void s2cHandler()
             gamePlayerLocalTick(currentPlayer);
             sendGlobalBuffer(currentPlayer);
         }
-        sendDispatch();
+        if (currentPlayer->packet_dispatch_flag)
+        {
+            printl(LOG_INFO,"dispatching packet alt\n");
+            if (currentPlayer->packet_timeout > SEND_PACKET_TIMEOUT)
+            {
+                currentPlayer->remove_player = 1;
+            }
+            else
+            {
+                size_t remaining = currentPlayer->packet_len - currentPlayer->packet_sent;
+                if (remaining == 0)
+                {
+                    if (currentPlayer->packet == NULL)
+                    {
+                        printl(LOG_ERROR, "WTF, idk why this is null\n");
+                        currentPlayer->remove_player = 1;
+                        return;
+                    }
+                    U_free(currentPlayer->packet);
+                    currentPlayer->packet_len = 0;
+                    currentPlayer->packet_sent = 0;
+                    currentPlayer->packet = NULL;
+                    currentPlayer->packet_dispatch_flag = 0;
+                }
+                else
+                {
+                    size_t totalSent = sendData(&currentPlayer->packet[currentPlayer->packet_sent], remaining);
+                    currentPlayer->packet_sent += totalSent;
+                }
+            }
+            currentPlayer->packet_timeout++;
+        }
+        else
+        {
+            currentPlayer->packet_timeout = 0;
+            sendDispatch();
+        }
         currentPlayer->global_buffer_start_index = 0;
     }
     sendclearGlobalBuffer();
@@ -549,7 +585,11 @@ int UCraftStart(uint8_t *cleanup_flag)
             if (FD_ISSET(server_fd, &set))
             {
                 int new_socket = U_accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-                U_setsockopt(new_socket, SOL_SOCKET, SO_LINGER, (void *)(&opt), sizeof(opt));
+                //set the socket non blocking
+                if(U_fctl(new_socket, F_SETFL, U_fctl(new_socket, F_GETFL, 0) | O_NONBLOCK)){
+                    printl(LOG_ERROR, "Failed to set socket non blocking\n");
+                    return 1;
+                }
                 if (new_socket > max_sock)
                 {
                     max_sock = new_socket;

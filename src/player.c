@@ -164,6 +164,9 @@ uint8_t playerRemove(player_t *player)
 #endif /*ONLINE_MODE_AUTH*/
   U_shutdown(player->player_fd, SHUT_RDWR);
   U_close(player->player_fd);
+  if(player->packet){
+    U_free(player->packet);
+  }
   FD_CLR(player->player_fd, &masterset);
   if (player->active)
   {

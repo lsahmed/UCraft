@@ -262,10 +262,11 @@ size_t sendGlobalBuffer(player_t *player)
   }
   return 0;
 }
-void sendData(uint8_t *data, size_t buffersize)
+size_t sendData(uint8_t *data, size_t buffersize)
 {
   int sock = sendPacketVars.player->player_fd;
   size_t totalSent = 0;
+  //split the packet in fragments
   while (totalSent < buffersize)
   {
     size_t remaining = buffersize - totalSent;
@@ -274,13 +275,35 @@ void sendData(uint8_t *data, size_t buffersize)
 
     if (r < 0)
     {
+      //the issue with EAGAIN is that if we loop over it again with no delay, it will not work so for now just simply dispatch the packet later
+      if (errno == EAGAIN)
+      {
+        if(sendPacketVars.player->packet){
+          printl(LOG_ERROR,"Packet already exists! try again later\n");
+          return totalSent;
+        }
+        //allocate the packet
+        sendPacketVars.player->packet = U_malloc(remaining);
+        if (sendPacketVars.player->packet == NULL)
+        {
+          printl(LOG_ERROR, "Memory allocation failed alt packet!\n");
+          sendPacketVars.player->remove_player = 1;
+          return totalSent;
+        }
+        //copy the packet
+        sendPacketVars.player->packet_len = remaining;
+        memcpy(sendPacketVars.player->packet, (char *)data + totalSent, remaining);
+        sendPacketVars.player->packet_dispatch_flag = 1;
+        return totalSent;
+      }
       printl(LOG_ERROR, "could not send (%d) code %ld (%p %ld)\n", sock, r, data, totalSent);
+      printl(LOG_ERROR, "errno: %s\n", strerror(errno));
       sendPacketVars.player->remove_player = 1;
-      return;
+      return totalSent;
     }
-
     totalSent += r;
   }
+  return totalSent;
 }
 void sendStartPlayer(player_t *player)
 {

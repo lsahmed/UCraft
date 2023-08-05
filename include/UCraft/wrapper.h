@@ -11,8 +11,13 @@
 #include <sys/select.h>
 #include <signal.h>
 #include <netdb.h>
+#include <fcntl.h>
 
 // Misc functions
+static inline int U_fctl(int fd, int cmd, int arg)
+{
+    return fcntl(fd, cmd, arg);
+}
 static inline void U_usleep(useconds_t usec)
 {
     usleep(usec);
