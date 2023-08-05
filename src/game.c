@@ -253,6 +253,26 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
             {
                 int32_t x = floor(currentPlayer->x);
                 int32_t z = floor(currentPlayer->z);
+                if (x == currentPlayer->gamePlayerData.bx && z == currentPlayer->gamePlayerData.bz)
+                {
+                    currentPlayer->gamePlayerData.ongroundtimeout++;
+                }
+                //player is in some corner, so get rid of the blocks
+                if (currentPlayer->gamePlayerData.ongroundtimeout > 70)
+                {
+                    for (int32_t i = -1; i < 2; i++)
+                    {
+                        for (int32_t j = -1; j < 2; j++)
+                        {
+                            if (getBlock(x + i, z + j))
+                            {
+                                setBlock(x + i, z + j, 0);
+                                PlayS2Cblock(currentPlayer, MINECRAFT_AIR, x + i, gameData.centerY, z + j);
+                            }
+                        }
+                    }
+                    currentPlayer->gamePlayerData.ongroundtimeout = 0;  
+                }
                 if (getBlock(x, z))
                 {
                     if (currentPlayer->gamePlayerData.timeout > 40)
@@ -268,6 +288,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
                         currentPlayer->gamePlayerData.bx = x;
                         currentPlayer->gamePlayerData.bz = z;
                         currentPlayer->gamePlayerData.timeout = 0;
+                        currentPlayer->gamePlayerData.ongroundtimeout = 0;
                     }
                     currentPlayer->gamePlayerData.timeout++;
                 }

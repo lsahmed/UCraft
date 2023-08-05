@@ -22,6 +22,7 @@ struct gamePlayerData_t
 {
     int32_t bx, bz; // previous block
     size_t timeout;
+    size_t ongroundtimeout;
     uint8_t isPlaying : 1;
     uint8_t isSpectating : 1;
 };
