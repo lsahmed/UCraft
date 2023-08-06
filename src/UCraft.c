@@ -339,7 +339,6 @@ static void s2cHandler()
         }
         if (currentPlayer->packet_dispatch_flag)
         {
-            printl(LOG_INFO,"dispatching packet alt\n");
             if (currentPlayer->packet_timeout > SEND_PACKET_TIMEOUT)
             {
                 currentPlayer->remove_player = 1;
