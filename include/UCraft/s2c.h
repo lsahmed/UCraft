@@ -138,7 +138,7 @@
 
 #define PLAYS2C_MAPPING_LEN 131
 
-extern const uint8_t s2c_1_19_4_1_19_4[];
+extern const uint8_t s2c_1_19_4_1_20_1[];
 
 void StatusS2Cresponse(player_t *currentPlayer);
 void StatusS2Cpong(player_t *currentPlayer);

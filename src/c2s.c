@@ -161,7 +161,7 @@ static void PlayC2S_use_item(player_t *currentPlayer) {}
 // static void PlayC2S_chat_message(player_t *currentPlayer){}
 // static void PlayC2S_container_action(player_t *currentPlayer){}
 // static void PlayC2S_crafting_grid(player_t *currentPlayer){}
-void (*c2s_1_19_4_1_19_4[])(player_t *currentPlayer) = {
+void (*c2s_1_19_4_1_20_1[])(player_t *currentPlayer) = {
     &PlayC2S_confirm_teleport,
     &PlayC2S_block_nbt,
     &PlayC2S_difficulty,

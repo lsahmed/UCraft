@@ -5,7 +5,7 @@ import urllib.request
 import sys
 
 OUTPUT_FOLDER = "entities"
-CLIENT_VERSION = "1.19.4"
+CLIENT_VERSION = "1.20.1"
 
 # https://stackoverflow.com/questions/13881092/download-progressbar-for-python-3
 

@@ -68,7 +68,7 @@ damage_type.tags.append(TAG_String(name="type", value="damage_type"))
 damage_type_value = TAG_List(name="value", type=TAG_Compound)
 damage_type_entry = TAG_Compound()
 ##these are required for 1.19.4
-damage_types =[ "in_fire", "lightning_bolt", "on_fire", "lava", "hot_floor", "in_wall", "cramming", "drown", "starve", "cactus", "fall", "fly_into_wall", "out_of_world", "generic", "magic", "wither", "dragon_breath", "dry_out", "sweet_berry_bush", "freeze", "stalagmite", "falling_block", "falling_anvil", "falling_stalactite", "sting", "mob_attack", "mob_attack_no_aggro", "player_attack", "arrow", "trident", "mob_projectile", "fireworks", "fireball", "unattributed_fireball", "wither_skull", "thrown", "indirect_magic", "thorns","explosion","player_explosion","sonic_boom","bad_reswpawn_point"]
+damage_types =[ "in_fire", "lightning_bolt", "on_fire", "lava", "hot_floor", "in_wall", "cramming", "drown", "starve", "cactus", "fall", "fly_into_wall", "out_of_world", "generic", "magic", "wither", "dragon_breath", "dry_out", "sweet_berry_bush", "freeze", "stalagmite", "falling_block", "falling_anvil", "falling_stalactite", "sting", "mob_attack", "mob_attack_no_aggro", "player_attack", "arrow", "trident", "mob_projectile", "fireworks", "fireball", "unattributed_fireball", "wither_skull", "thrown", "indirect_magic", "thorns","explosion","player_explosion","sonic_boom","bad_reswpawn_point","outside_border","generic_kill"]
 for x in range(len(damage_types)):
     damage_type_entry = TAG_Compound()
     damage_type_entry.tags.append(TAG_String(name="name", value=damage_types[x]))

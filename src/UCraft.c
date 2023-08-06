@@ -149,7 +149,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
         case 3: // play state
             if (cmd < PLAYC2S_MAPPING_LEN)
             {
-                void (**packet_handler)(player_t *) = c2s_1_19_4_1_19_4;
+                void (**packet_handler)(player_t *) = c2s_1_19_4_1_20_1;
                 if (packet_handler[cmd] != NULL)
                 {
                     if (*packet_handler[cmd] != NULL)
@@ -584,8 +584,9 @@ int UCraftStart(uint8_t *cleanup_flag)
             if (FD_ISSET(server_fd, &set))
             {
                 int new_socket = U_accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-                //set the socket non blocking
-                if(U_fctl(new_socket, F_SETFL, U_fctl(new_socket, F_GETFL, 0) | O_NONBLOCK)){
+                // set the socket non blocking
+                if (U_fctl(new_socket, F_SETFL, U_fctl(new_socket, F_GETFL, 0) | O_NONBLOCK))
+                {
                     printl(LOG_ERROR, "Failed to set socket non blocking\n");
                     return 1;
                 }

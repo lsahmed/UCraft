@@ -23,8 +23,8 @@
 #define VIEWDISTANCE 12
 #define RESPAWNSCREEN 1
 
-#define PROTOCOL_VERSION 762
-#define LONG_PROTOCOL_VERSION "\\u00A7c UCraft: 1.19.4"
+#define PROTOCOL_VERSION 763
+#define LONG_PROTOCOL_VERSION "\\u00A7c UCraft: 1.20.1"
 #define MOTD "\\u00A7a\\u00A7lUCraft\\u00A7r\\u00A7l server, hope \\u00A7othis \\u00A7rformatting works\\u00A7r\\n\\u00A7lwoah another line\\u00A7r\\n"
 
 // Game config

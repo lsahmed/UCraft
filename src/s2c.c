@@ -139,6 +139,7 @@ void PlayS2Cjoingame(player_t *currentPlayer)
   sendByte(0);                           // Is Debug
   sendByte(0);                           // Is Flat
   sendByte(0);                           // Has death location
+  sendVarInt(0);                         // Portal cooldown
   sendDone();
 }
 void PlayS2Ctablist(player_t *currentPlayer, TabListAction action, uint16_t eid)
@@ -284,7 +285,6 @@ void PlayS2Cchunk(player_t *currentPlayer, int32_t x, int32_t z)
   sendVarInt(len);
   sendBuffer(block_entity, len);
   sendVarInt(0); // block entiies
-  sendByte(0);   // Trust Edges
   for (int i = 0; i < 4; i++)
   { // Sky Light Mask,...
     sendVarInt(1);
