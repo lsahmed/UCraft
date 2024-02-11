@@ -538,7 +538,7 @@ int UCraftStart(uint8_t *cleanup_flag)
         printl(LOG_ERROR, "Cannot create socket fd:%d\n", server_fd);
         return 1;
     }
-    if (U_setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
+    if (U_setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
     {
         printl(LOG_ERROR, "setsockopt error\n");
         return 1;
