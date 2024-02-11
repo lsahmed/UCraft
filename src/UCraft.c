@@ -20,7 +20,8 @@
 #include "encryption.h"
 #include "https.h"
 
-size_t main_tick;
+int server_fd = -1;
+size_t main_tick = 0;
 
 static void c2sHandler(readPacketVars_t *readPacketValue)
 {
@@ -510,14 +511,25 @@ static void s2cHandler()
     gameGlobalTick();
     sendRevertFromGlobalBuffer();
 }
+void UCraftCleanup()
+{
+    printl(LOG_INFO, "Cleaning up!\n");
+    // cleanup
+    socketioCleanup();
+#ifdef ONLINE_MODE
+    encryptionCleanup();
+#endif /*ONLINE_MODE*/
+    playerCleanup();
+#ifdef ONLINE_MODE_AUTH
+    httpsCleanup();
+#endif /*ONLINE_MODE_AUTH*/
+    if (server_fd >= 0)
+    {
+        U_close(server_fd);
+    }
+}
 int UCraftStart(uint8_t *cleanup_flag)
 {
-    if (cleanup_flag == NULL)
-    {
-        printl(LOG_ERROR, "Cleanup flag is NULL\n");
-        return 0;
-    }
-    int server_fd;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
@@ -525,6 +537,11 @@ int UCraftStart(uint8_t *cleanup_flag)
     struct timeval timeout;
     int rv;
     int max_sock = 0;
+    if (cleanup_flag == NULL)
+    {
+        printl(LOG_ERROR, "Cleanup flag is NULL\n");
+        return 0;
+    }
 #ifdef ONLINE_MODE
     if (encryptionBegin())
     {
@@ -536,11 +553,13 @@ int UCraftStart(uint8_t *cleanup_flag)
     if ((server_fd = U_socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printl(LOG_ERROR, "Cannot create socket fd:%d\n", server_fd);
+        UCraftCleanup();
         return 1;
     }
     if (U_setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
     {
         printl(LOG_ERROR, "setsockopt error\n");
+        UCraftCleanup();
         return 1;
     }
     address.sin_family = AF_INET;
@@ -549,11 +568,13 @@ int UCraftStart(uint8_t *cleanup_flag)
     if (U_bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
     {
         printl(LOG_ERROR, "bind error");
+        UCraftCleanup();
         return 1;
     }
     if (U_listen(server_fd, MAX_PLAYERS + 1) < 0)
     {
         printl(LOG_ERROR, "listen error");
+        UCraftCleanup();
         return 1;
     }
     printl(LOG_INFO, "Listening on *:%d\n", PORT);
@@ -569,7 +590,6 @@ int UCraftStart(uint8_t *cleanup_flag)
     {
         if (*cleanup_flag)
         {
-            printl(LOG_INFO, "Cleaning up!\n");
             break;
         }
         memcpy(&set, playerGetSet(), sizeof(fd_set));
@@ -577,7 +597,7 @@ int UCraftStart(uint8_t *cleanup_flag)
         if (rv == -1)
         {
             printl(LOG_ERROR, "select error");
-            return 1;
+            break;
         }
         else
         {
@@ -588,7 +608,7 @@ int UCraftStart(uint8_t *cleanup_flag)
                 if (U_fctl(new_socket, F_SETFL, U_fctl(new_socket, F_GETFL, 0) | O_NONBLOCK))
                 {
                     printl(LOG_ERROR, "Failed to set socket non blocking\n");
-                    return 1;
+                    break;
                 }
                 if (new_socket > max_sock)
                 {
@@ -664,15 +684,6 @@ int UCraftStart(uint8_t *cleanup_flag)
         U_usleep(10000); // need to tick 20 times a second
         main_tick++;
     }
-    // cleanup
-    socketioCleanup();
-#ifdef ONLINE_MODE
-    encryptionCleanup();
-#endif /*ONLINE_MODE*/
-    playerCleanup();
-#ifdef ONLINE_MODE_AUTH
-    httpsCleanup();
-#endif /*ONLINE_MODE_AUTH*/
-    U_close(server_fd);
+    UCraftCleanup();
     return 0;
 }
