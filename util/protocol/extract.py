@@ -6,6 +6,9 @@ import sys
 
 OUTPUT_FOLDER = "protocol"
 
+PACKET_DIRECTIONS = ["c2s", "s2c"]
+PACKET_STATES = ["play", "configuration"]
+
 
 # https://stackoverflow.com/questions/13881092/download-progressbar-for-python-3
 def reporthook(blocknum, blocksize, totalsize):
@@ -57,28 +60,40 @@ def merge_releases(parsed):
                     merged_releases[version] = [name]
         except:
             continue
+    for version in merged_releases:
+        if type(parsed[str(version)]["packets"]["c2s"]) == dict:
+            playC2S = parsed[str(version)]["packets"]["c2s"]["play"]
+            playS2C = parsed[str(version)]["packets"]["s2c"]["play"]
+            configC2S = parsed[str(version)]["packets"]["c2s"]["configuration"]
+            configS2C = parsed[str(version)]["packets"]["s2c"]["configuration"]
+        else:
+            playC2S = parsed[str(version)]["packets"]["c2s"]
+            playS2C = parsed[str(version)]["packets"]["s2c"]
+            configC2S = []
+            configS2C = []
+        merged_releases[version] = {
+            "versions": merged_releases[version],
+            "packets": {
+                "c2s": {"play": playC2S, "configuration": configC2S},
+                "s2c": {"play": playS2C, "configuration": configS2C},
+            },
+        }
     return merged_releases
 
 
 # get all the packets from different versions and join them
-def extract_packet_template(parsed, releases):
-    S2Ctemplate = list()
-    C2Stemplate = list()
+def extract_packet_template(releases):
+    packet_template = {
+        "c2s": {"play": [], "configuration": []},
+        "s2c": {"play": [], "configuration": []},
+    }
     for version in releases:
-        # newer versions of the game include play packets along with the config packets
-        try:
-            s2c_packets = parsed[str(version)]["packets"]["s2c"]["play"]
-            c2s_packets = parsed[str(version)]["packets"]["c2s"]["play"]
-        except:
-            s2c_packets = parsed[str(version)]["packets"]["s2c"]
-            c2s_packets = parsed[str(version)]["packets"]["c2s"]
-        for s2c_packet in s2c_packets:
-            if s2c_packet not in S2Ctemplate:
-                S2Ctemplate.append(s2c_packet)
-        for c2s_packet in c2s_packets:
-            if c2s_packet not in C2Stemplate:
-                C2Stemplate.append(c2s_packet)
-    return [S2Ctemplate, C2Stemplate]
+        for direction in PACKET_DIRECTIONS:
+            for state in PACKET_STATES:
+                for packet in releases[version]["packets"][direction][state]:
+                    if packet not in packet_template[direction][state]:
+                        packet_template[direction][state].append(packet)
+    return packet_template
 
 
 if __name__ == "__main__":
@@ -93,68 +108,94 @@ if __name__ == "__main__":
     with open("versions.json", "rb") as versions_json:
         parsed = json.loads(versions_json.read())
         releases = merge_releases(parsed)
-        S2Ctemplate, C2Stemplate = extract_packet_template(parsed, releases)
+        packetTemplate = extract_packet_template(releases)
         c_s2c_header = "#ifndef _S2C_H\n#define _S2C_H\n\n"
         c_s2c_code = '#include "s2c.h"\n'
 
         c_c2s_code = '#include "c2s.h"\n#include "player.h"\n'
         c_c2s_header = "#ifndef _C2S_H\n#define _C2S_H\n"
         c_c2s_map = ""
-        for idx, conversion in enumerate(S2Ctemplate):
-            j = "#define S2C_PLAY_"
-            j += str(conversion).upper()
-            j += " %d\n" % (idx)
-            c_s2c_header += j
-        c_s2c_header += "\n"
-        for version in releases:
-            # newer versions of the game include play packets along with the config packets
-            try:
-                s2c_packets = parsed[str(version)]["packets"]["s2c"]["play"]
-                c2s_packets = parsed[str(version)]["packets"]["c2s"]["play"]
-            except:
-                s2c_packets = parsed[str(version)]["packets"]["s2c"]
-                c2s_packets = parsed[str(version)]["packets"]["c2s"]
-            arranged_s2c = list()
-            arranged_c2s = ["0"] * len(C2Stemplate)
-            for templ in S2Ctemplate:
-                if templ in s2c_packets:
-                    arranged_s2c.append(int(s2c_packets.index(templ)))
-                else:
-                    arranged_s2c.append(0xFF)
-            version_string = (
-                re.sub("[^\\w\\s]", "_", releases[version][-1])
-                + "_"
-                + re.sub("[^\\w\\s]", "_", releases[version][0])
-            )
-            c_s2c_code += bin2header(arranged_s2c, "s2c_" + version_string)
+        for state in PACKET_STATES:
+            for idx, conversion in enumerate(packetTemplate["s2c"][state]):
+                j = "#define S2C_" + state.upper() + "_"
+                j += str(conversion).upper()
+                j += " %d\n" % (idx)
+                c_s2c_header += j
             c_s2c_header += (
-                "extern const unsigned char " + "s2c_" + version_string + "[];\n"
+                "\n#define S2C_"
+                + state.upper()
+                + " MAPPING_LEN %d\n\n" % (len(packetTemplate["s2c"][state]))
             )
-            c_c2s_header += "extern const void *c2s_" + version_string + "[];\n"
-            c_c2s_map += "const void *c2s_" + version_string + "[] = {\n"
-            for c2spacket in c2s_packets:
-                if c2spacket in C2Stemplate:
-                    index = c2s_packets.index(c2spacket)
-                    arranged_c2s[index] = "&PlayC2S_" + c2spacket
-                else:
-                    print("missing mapping", c2spacket)
-            c_c2s_map += ",\n".join(arranged_c2s) + "\n};\n"
-        for conversion in C2Stemplate:
-            c_c2s_code += (
-                "static void "
-                + "PlayC2S_"
-                + conversion
-                + "(player_t *currentPlayer){}\n"
+            for conversion in packetTemplate["c2s"][state]:
+                c_c2s_code += (
+                    "static void "
+                    + state.capitalize()
+                    + "C2S_"
+                    + conversion
+                    + "(player_t *currentPlayer){}\n"
+                )
+            c_c2s_code += "\n"
+        for state in PACKET_STATES:
+            for version in releases:
+                # check if the packet list is empty
+                if not releases[version]["packets"]["s2c"][state]:
+                    continue
+                # the version contains the oldest client supported on the protocol to the newest
+                version_string = (
+                    re.sub("[^\\w\\s]", "_", releases[version]["versions"][-1])
+                    + "_"
+                    + re.sub("[^\\w\\s]", "_", releases[version]["versions"][0])
+                )
+                arranged_s2c = list()
+                # look up the packet in the template and append how far is the index from the releases
+                for templ in packetTemplate["s2c"][state]:
+                    if templ in releases[version]["packets"]["s2c"][state]:
+                        arranged_s2c.append(
+                            int(releases[version]["packets"]["s2c"][state].index(templ))
+                        )
+                    else:
+                        arranged_s2c.append(0xFF)
+                c_s2c_code += bin2header(
+                    arranged_s2c, "s2c_" + state + "_" + version_string
+                )
+                c_s2c_header += (
+                    "extern const unsigned char "
+                    + "s2c_"
+                    + state
+                    + "_"
+                    + version_string
+                    + "[];\n"
+                )
+                # c2s starts here
+                arranged_c2s = ["0"] * len(packetTemplate["c2s"][state])
+                c_c2s_header += (
+                    "extern const void *c2s_" + state + "_" + version_string + "[];\n"
+                )
+                c_c2s_map += (
+                    "const void *c2s_" + state + "_" + version_string + "[] = {\n"
+                )
+                # here the order of the C2S function matters, so the packet index is compared by the template and placed accordingly
+                for c2spacket in releases[version]["packets"]["c2s"][state]:
+                    if c2spacket in packetTemplate["c2s"][state]:
+                        index = releases[version]["packets"]["c2s"][state].index(
+                            c2spacket
+                        )
+                        arranged_c2s[index] = (
+                            "&" + state.capitalize() + "C2S_" + c2spacket
+                        )
+                    else:
+                        print("missing mapping", c2spacket)
+                c_c2s_map += ",\n".join(arranged_c2s) + "\n};\n"
+            c_c2s_code += c_c2s_map
+            # print(c_c2s_code)
+            # c_s2c_header += "const unsigned int protocol_mapping_len = %d;" % (len(S2CPlayTemplate))
+            c_c2s_header += (
+                "\n#define C2S_"
+                + state.upper()
+                + "_MAPPING_LEN %d\n\n" % (len(packetTemplate["c2s"][state]))
             )
-        c_c2s_code += c_c2s_map
-        # print(c_c2s_code)
-        # c_s2c_header += "const unsigned int protocol_mapping_len = %d;" % (len(S2Ctemplate))
-        c_s2c_header += "\n\n#define PLAYS2C_MAPPING_LEN %d" % (len(S2Ctemplate))
         c_s2c_header += "\n#endif"
-        c_c2s_header += "\n\n#define PLAYC2S_MAPPING_LEN %d" % (len(C2Stemplate))
         c_c2s_header += "\n#endif"
-        # print(c_c2s_header)
-        # print(c_s2c_code)
         if not os.path.exists(OUTPUT_FOLDER):
             os.mkdir(OUTPUT_FOLDER)
         with open(OUTPUT_FOLDER + "/s2c.h", "w") as x:
