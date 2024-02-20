@@ -5,7 +5,7 @@
 #include "log.h"
 #include "util.h"
 // protocol look up table which maps packets ids to a definition, see util/protocol
-const uint8_t s2c_1_19_4_1_20_1[] = {
+const uint8_t s2c_play_1_20_4_1_20_4[] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
     0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
     0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23,
@@ -15,8 +15,11 @@ const uint8_t s2c_1_19_4_1_20_1[] = {
     0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53,
     0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
     0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b,
-    0x6c, 0x6d, 0x6e, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+const uint8_t s2c_configuration_1_20_4_1_20_4[] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
 static readPacketVars_t readPacketVars = {.pktbytes = -1};
 
 readPacketVars_t *readValues() { return (readPacketVars_t *)&readPacketVars; }
@@ -433,14 +436,27 @@ void sendByte(uint8_t b)
 }
 void sendPlayPacketHeader(size_t id)
 {
-  if (id < PLAYS2C_MAPPING_LEN && id > 0)
+  if (id < S2C_PLAY_MAPPING_LEN && id > 0)
   {
-    if (!(s2c_1_19_4_1_20_1[id] == 0xff))
+    if (!(s2c_play_1_20_4_1_20_4[id] == 0xff))
     {
-      sendByte(s2c_1_19_4_1_20_1[id]);
+      sendByte(s2c_play_1_20_4_1_20_4[id]);
       return;
     }
-    printl(LOG_ERROR, "Incorrect packet id ID:%ld player: %d\n", id, sendPacketVars.player->player_id);
+    printl(LOG_ERROR, "Incorrect PLAY packet id ID:%ld player: %d map: %d\n", id, sendPacketVars.player->player_id, s2c_play_1_20_4_1_20_4[id]);
+  }
+  sendPacketVars.player->remove_player = 1;
+}
+void sendConfigurationPacketHeader(size_t id)
+{
+  if (id < S2C_CONFIGURATION_MAPPING_LEN && id > 0)
+  {
+    if (!(s2c_configuration_1_20_4_1_20_4[id] == 0xff))
+    {
+      sendByte(s2c_configuration_1_20_4_1_20_4[id]);
+      return;
+    }
+    printl(LOG_ERROR, "Incorrect CONFIG packet id ID:%ld player: %d\n", id, sendPacketVars.player->player_id);
   }
   sendPacketVars.player->remove_player = 1;
 }
@@ -601,7 +617,7 @@ void sendUUID(uint16_t seed)
   stmp[6] = 0x30;
   stmp[8] = 0x80;
   stmp[0] = (seed >> 8) & 0xff;
-  stmp[1] = (seed)&0xff;
+  stmp[1] = (seed) & 0xff;
   sendBuffer(stmp, sizeof(stmp));
 }
 void sendUUIDString(uint16_t seed)
@@ -623,7 +639,7 @@ void sendUUIDString(uint16_t seed)
   stmp[0] = hexdigits_lower[((seed) >> 12 & 0xf)];
   stmp[1] = hexdigits_lower[((seed >> 8) & 0xf)];
   stmp[2] = hexdigits_lower[((seed >> 4) & 0xf)];
-  stmp[3] = hexdigits_lower[((seed)&0xf)];
+  stmp[3] = hexdigits_lower[((seed) & 0xf)];
   sendString(stmp, strnlen(stmp, sizeof(stmp)));
 }
 

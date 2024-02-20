@@ -1,12 +1,9 @@
 
-#include <arpa/inet.h>
 #include <math.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
 
 #include "wrapper.h"
 #include "c2s.h"
@@ -147,10 +144,23 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
                 break;
             }
             break;
-        case 3: // play state
-            if (cmd < PLAYC2S_MAPPING_LEN)
+        case 3: // config state
+            if (cmd < C2S_CONFIGURATION_MAPPING_LEN)
             {
-                void (**packet_handler)(player_t *) = c2s_1_19_4_1_20_1;
+                void (**packet_handler)(player_t *) = c2s_configuration_1_20_4_1_20_4;
+                if (packet_handler[cmd] != NULL)
+                {
+                    if (*packet_handler[cmd] != NULL)
+                    {
+                        (*packet_handler[cmd])(currentPlayer);
+                    }
+                }
+            }
+            break;
+        case 4: // play state
+            if (cmd < C2S_PLAY_MAPPING_LEN)
+            {
+                void (**packet_handler)(player_t *) = c2s_play_1_20_4_1_20_4;
                 if (packet_handler[cmd] != NULL)
                 {
                     if (*packet_handler[cmd] != NULL)
@@ -224,14 +234,13 @@ static void s2cHandler()
             PlayS2Cheartbeat(currentPlayer);
             PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED | TABLIST_ACTION_LATENCY, currentPlayer->player_id);
             PlayS2Centitydata(currentPlayer, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, currentPlayer->skin_parts); // enable from cape to hat
-
             // show player to other clients
             for (player_t *p = playerGetHead(); p != NULL; p = p->next)
             {
                 if (p != currentPlayer && p->active)
                 {
                     PlayS2Ctablist(p, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, p->player_id);
-                    PlayS2Centityplayer(p);
+                    PlayS2Cspawnentity(p,ENTITY_METADATA_TYPE_PLAYER);
                     PlayS2Centitydata(p, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, p->skin_parts); // enable from cape to hat
                 }
             }
@@ -242,6 +251,12 @@ static void s2cHandler()
             currentPlayer->chunk_next_event = 1;
             currentPlayer->logged_on = 1;
             currentPlayer->spawn_event = 0;
+        }
+        if (currentPlayer->configuration_event)
+        {
+            ConfigurationS2Cregistry();
+            ConfigurationS2Cready();
+            currentPlayer->configuration_event = 0;
         }
         if (currentPlayer->chunk_next_event)
         {
@@ -259,6 +274,7 @@ static void s2cHandler()
             }
             if (currentPlayer->chunk_z > CHUNK_SIZE)
             {
+                PlayS2Cgameevent(EVENT_WAIT_LEVEL_CHUNKS,1.0f);
                 currentPlayer->chunk_x = 0;
                 currentPlayer->chunk_z = 0;
                 currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
@@ -283,10 +299,9 @@ static void s2cHandler()
 #ifdef ONLINE_MODE_AUTH
             httpsFreePlayer(currentPlayer);
 #endif /*ONLINE_MODE_AUTH*/
-            currentPlayer->active = 1;
-            currentPlayer->spawn_event = 1;
             currentPlayer->login_event = 0;
             currentPlayer->handshake_status = 3;
+            currentPlayer->configuration_event = 1;
         }
         if (currentPlayer->ingame && currentPlayer->active)
         {
@@ -389,10 +404,11 @@ static void s2cHandler()
             if (currentPlayer->logged_on)
             {
                 PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, currentPlayer->player_id);
-                PlayS2Centityplayer(currentPlayer);
+                PlayS2Cspawnentity(currentPlayer,ENTITY_METADATA_TYPE_PLAYER);
                 PlayS2Centitydata(currentPlayer, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, currentPlayer->skin_parts); // enable from cape to hat
                 currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
                 currentPlayer->send_chat_login_event = 1;
+                currentPlayer->ready_to_play = 1;
                 currentPlayer->logged_on = 0;
             }
             if (currentPlayer->position_event)
@@ -480,7 +496,7 @@ static void s2cHandler()
             if (currentPlayer->send_chat_login_event)
             {
                 char join_msg[64];
-                snprintf(join_msg, sizeof(join_msg), "\\u00A7e%s has joined the game", currentPlayer->playername);
+                snprintf(join_msg, sizeof(join_msg), "\u00A7e%s has joined the game", currentPlayer->playername);
                 PlayS2Cunsignedchatmessage(join_msg, strnlen(join_msg, sizeof(join_msg)));
                 currentPlayer->send_chat_login_event = 0;
             }
@@ -500,7 +516,7 @@ static void s2cHandler()
         if (playerGetActiveCount() > 0)
         {
             char left_msg[64];
-            snprintf(left_msg, sizeof(left_msg), "\\u00A7e%s has left the game", disconnected->name);
+            snprintf(left_msg, sizeof(left_msg), "\u00A7e%s has left the game", disconnected->name);
             PlayS2Cunsignedchatmessage(left_msg, strnlen(left_msg, sizeof(left_msg)));
             PlayS2Ctablistremove(disconnected->id);
             PlayS2Centitydestroy(disconnected->id);

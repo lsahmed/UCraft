@@ -5,7 +5,7 @@ import urllib.request
 import sys
 
 OUTPUT_FOLDER = "entities"
-CLIENT_VERSION = "1.20.1"
+CLIENT_VERSION = "1.20.4"
 
 # https://stackoverflow.com/questions/13881092/download-progressbar-for-python-3
 
@@ -48,14 +48,18 @@ if __name__ == "__main__":
         json_file = json.loads(entities_json.read())
         data = json_file["Entity"]["meta"]
         enum_player_metadata = "typedef enum {\n"
-        for i, key in enumerate(data.keys()):
-            if i == len(data.keys()) - 1:
+        for i, key in enumerate(json_file.keys()):
+            if(str(key).find("minecraft:") == -1):
+                break
+            name = str(key).split(":",1)
+            name[1] = "ENTITY_METADATA_TYPE_" + name[1].upper()
+            if i == len(json_file.keys()) - 1:
                 enum_player_metadata += "    " + \
-                    str(key) + " = " + str(data[key]) + "\n"
+                    name[1] + " = " + str(i) + "\n"
             else:
                 enum_player_metadata += "    " + \
-                    str(key) + " = " + str(data[key]) + ",\n"
-        enum_player_metadata += "} EntityMetadata;\n"
+                    name[1] + " = " + str(i) + ",\n"
+        enum_player_metadata += "} EntityMetadataType;\n"
         data = json_file["minecraft:player"]["meta"]
         enum_player_metadata += "typedef enum {\n"
         for i, key in enumerate(data.keys()):

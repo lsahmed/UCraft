@@ -199,7 +199,7 @@ void gamePlayerLeft(player_t *currentPlayer)
 void gameGlobalTick()
 {
     size_t playerCount = 0;
-    if ((playerCount = playerGetActiveCount()) == 0)
+    if ((playerCount = playerGetInGameCount()) == 0)
     {
         return;
     }

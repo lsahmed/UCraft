@@ -51,11 +51,13 @@ struct player_t
   uint8_t chunk_next_event : 1;
   uint8_t chunk_loaded_event : 1;
   uint8_t ingame : 1;
+  uint8_t ready_to_play:1;
   uint8_t logged_on : 1;
   uint8_t active : 1;
   uint8_t onground : 1;
   uint8_t heartbeat : 1;
   uint8_t remove_player : 1;
+  uint8_t configuration_event:1;
   uint8_t send_chat_login_event : 1;
   uint8_t settings_changed_event : 1;
   // Player Movement & action
@@ -116,5 +118,6 @@ int playerCheckDuplicate(player_t *player);
 uint8_t playerRemove(player_t *player);
 size_t playerGetCount();
 size_t playerGetActiveCount();
+size_t playerGetInGameCount();
 void playerCleanup();
 #endif

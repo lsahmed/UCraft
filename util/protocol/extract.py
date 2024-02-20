@@ -124,7 +124,7 @@ if __name__ == "__main__":
             c_s2c_header += (
                 "\n#define S2C_"
                 + state.upper()
-                + " MAPPING_LEN %d\n\n" % (len(packetTemplate["s2c"][state]))
+                + "_MAPPING_LEN %d\n\n" % (len(packetTemplate["s2c"][state]))
             )
             for conversion in packetTemplate["c2s"][state]:
                 c_c2s_code += (

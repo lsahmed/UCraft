@@ -68,7 +68,20 @@ size_t playerGetActiveCount()
   }
   return currentActivePlayers;
 }
-
+size_t playerGetInGameCount()
+{
+  size_t currentReadyToPlay = 0;
+  player_t *player = playerListHead;
+  while (player != NULL)
+  {
+    if (player->ready_to_play)
+    {
+      currentReadyToPlay++;
+    }
+    player = player->next;
+  }
+  return currentReadyToPlay;
+}
 player_t *playerGetId(int32_t player_id)
 {
   player_t *player = playerListHead;
@@ -164,7 +177,8 @@ uint8_t playerRemove(player_t *player)
 #endif /*ONLINE_MODE_AUTH*/
   U_shutdown(player->player_fd, SHUT_RDWR);
   U_close(player->player_fd);
-  if(player->packet){
+  if (player->packet)
+  {
     U_free(player->packet);
   }
   FD_CLR(player->player_fd, &masterset);

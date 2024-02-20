@@ -1,14 +1,15 @@
+#include <stdint.h>
+#include <stdio.h>
+
 #include "s2c.h"
 #include "enums.h"
 #include "log.h"
-#include <stdint.h>
 #include "encryption.h"
 #include "wrapper.h"
 #include "util.h"
 #ifdef ONLINE_MODE
 #include "mbedtls/base64.h"
 #endif /*ONLINE_MODE*/
-#include <stdio.h>
 
 extern int main_tick;
 
@@ -109,37 +110,36 @@ void LoginS2Csuccess(player_t *currentPlayer)
     sendVarInt(0); // Number Of Properties
   }
 #else
-  sendVarInt(0);   // Number Of Properties
+  sendVarInt(0); // Number Of Properties
 #endif /*ONLINE_MODE_AUTH*/
   sendDone();
 }
 // Play packets
-extern const uint8_t __codec_nbt[];
-extern const size_t __codec_nbt_len;
+
 void PlayS2Cjoingame(player_t *currentPlayer)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_INITIALIZE);
   sendInt(currentPlayer->player_id);
-  sendByte(0);        // Is hardcore
-  sendByte(GAMEMODE); // gamemode
-  currentPlayer->gamemode = GAMEMODE;
-  sendByte(-1);            // previous gamemode
-  sendByte(1);             // World Count
-  sendString("world", -1); // Dimension Names
-  sendBuffer((char *)__codec_nbt, __codec_nbt_len);
-  sendString("minecraft:overworld", -1); // Dimension Type
-  sendString("minecraft:overworld", -1); // Dimension Name
-  sendLong(0x482304890);                 //{hashedSeed} random bytes
+  sendByte(0);                           // Is hardcore
+  sendVarInt(1);                         // World Count
+  sendString("world", -1);               // Dimension Names
   sendVarInt(MAX_PLAYERS);               // Max Players
   sendVarInt(VIEWDISTANCE);              // viewdistance
   sendVarInt(VIEWDISTANCE);              // simulationdistance
   sendByte(0);                           // Reduced Debug Info
   sendByte(1);                           // Enable respawn screen
-  sendByte(0);                           // Is Debug
-  sendByte(0);                           // Is Flat
-  sendByte(0);                           // Has death location
-  sendVarInt(0);                         // Portal cooldown
+  sendByte(0);                           // Do limited crafting
+  sendString("minecraft:overworld", -1); // Dimension Type
+  sendString("minecraft:overworld", -1); // Dimension Name
+  sendLong(0x482304890);                 //{hashedSeed} random bytes
+  sendByte(GAMEMODE);                    // gamemode
+  currentPlayer->gamemode = GAMEMODE;
+  sendByte(-1);  // previous gamemode
+  sendByte(0);   // Is Debug
+  sendByte(0);   // Is Flat
+  sendByte(0);   // Has death location
+  sendVarInt(0); // Portal cooldown
   sendDone();
 }
 void PlayS2Ctablist(player_t *currentPlayer, TabListAction action, uint16_t eid)
@@ -214,17 +214,23 @@ void PlayS2Ctablistremove(uint16_t eid)
   sendUUID(eid);
   sendDone();
 }
-void PlayS2Centityplayer(player_t *currentPlayer)
+void PlayS2Cspawnentity(player_t *currentPlayer, EntityMetadataType type)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_ENTITY_PLAYER);
+  sendPlayPacketHeader(S2C_PLAY_ENTITY_OBJECT_SPAWN);
   sendVarInt(currentPlayer->player_id);
   sendUUID(currentPlayer->player_id);
+  sendVarInt(type);
   sendDouble(currentPlayer->x);
   sendDouble(currentPlayer->y);
   sendDouble(currentPlayer->z);
-  sendByte(currentPlayer->nyaw);
   sendByte(currentPlayer->npitch);
+  sendByte(currentPlayer->nyaw);
+  sendByte(currentPlayer->nyaw);
+  sendVarInt(0);
+  sendShort(0);
+  sendShort(0);
+  sendShort(0);
   sendDone();
 }
 void PlayS2Cpositionrotation(player_t *currentPlayer, double x, double y, double z)
@@ -259,8 +265,6 @@ void PlayS2Cchunk(player_t *currentPlayer, int32_t x, int32_t z)
   sendInt(z);
   // NBT start
   sendByte(0x0a);
-  sendByte(0);
-  sendByte(0);
   sendByte(0);
   //  NBT end
   // switch to another buffer so the size can be appended later on
@@ -405,17 +409,13 @@ void PlayS2Csignedchatmessage(player_t *currentPlayer, char *message, size_t len
 }
 void PlayS2Cunsignedchatmessage(char *message, size_t len)
 {
-  char buf[300];
-  static const char json1[] = "{\"text\":\"";
-  static const char json2[] = "\"}";
+  static const unsigned char NBT_text[9] = {
+      0x0A, 0x08, 0x00, 0x04, 0x74, 0x65, 0x78, 0x74, 0x00};
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_CHAT_MESSAGE);
-  sendSwitchToLocalBuffer(buf, sizeof(buf));
-  sendBuffer(json1, strlen(json1));
-  sendBuffer(message, len);
-  sendBuffer(json2, strlen(json2));
-  size_t size = sendRevertFromLocalBuffer();
-  sendString(buf, size);
+  sendBuffer((char *)NBT_text, 9);
+  sendString(message, len);
+  sendByte(0);
   sendByte(0);
   sendDone();
 }
@@ -512,5 +512,20 @@ void PlayS2Ccompassposition(player_t *currentPlayer, int32_t x, int32_t y, int32
   sendPlayPacketHeader(S2C_PLAY_COMPASS_POSITION);
   sendPosition(x, y, z);
   sendFloat(0);
+  sendDone();
+}
+void ConfigurationS2Cregistry()
+{
+  extern const uint8_t __codec_nbt[];
+  extern const size_t __codec_nbt_len;
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendBuffer((char *)__codec_nbt, __codec_nbt_len);
+  sendDone();
+}
+void ConfigurationS2Cready()
+{
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_READY);
   sendDone();
 }

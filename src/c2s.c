@@ -74,9 +74,11 @@ static void PlayC2S_settings(player_t *currentPlayer)
   currentPlayer->settings_changed_event = 1;
 }
 static void PlayC2S_command_suggestions(player_t *currentPlayer) {}
+static void PlayC2S_reconfigure(player_t *currentPlayer) {}
 static void PlayC2S_container_button(player_t *currentPlayer) {}
 static void PlayC2S_container_click(player_t *currentPlayer) {}
 static void PlayC2S_close_container(player_t *currentPlayer) {}
+static void PlayC2S_crafter_slot_lock(player_t *currentPlayer) {}
 static void PlayC2S_channel(player_t *currentPlayer) {}
 // static void PlayC2S_plugin(player_t *currentPlayer) {}
 static void PlayC2S_book(player_t *currentPlayer) {}
@@ -117,6 +119,7 @@ static void PlayC2S_ground_change(player_t *currentPlayer) {}
 static void PlayC2S_move_vehicle(player_t *currentPlayer) {}
 static void PlayC2S_steer_boat(player_t *currentPlayer) {}
 static void PlayC2S_item_pick(player_t *currentPlayer) {}
+static void PlayC2S_ping(player_t *currentPlayer) {}
 static void PlayC2S_crafting_recipe(player_t *currentPlayer) {}
 static void PlayC2S_toggle_fly(player_t *currentPlayer) {}
 static void PlayC2S_player_action(player_t *currentPlayer) {}
@@ -134,6 +137,7 @@ static void PlayC2S_vehicle_input(player_t *currentPlayer) {}
 // static void PlayC2S_steer_vehicle(player_t *currentPlayer) {}
 static void PlayC2S_pong(player_t *currentPlayer) {}
 static void PlayC2S_session_data(player_t *currentPlayer) {}
+static void PlayC2S_next_chunk_batch(player_t *currentPlayer) {}
 static void PlayC2S_displayed_recipe(player_t *currentPlayer) {}
 static void PlayC2S_recipe_book(player_t *currentPlayer) {}
 static void PlayC2S_anvil_item_name(player_t *currentPlayer) {}
@@ -161,7 +165,20 @@ static void PlayC2S_use_item(player_t *currentPlayer) {}
 // static void PlayC2S_chat_message(player_t *currentPlayer){}
 // static void PlayC2S_container_action(player_t *currentPlayer){}
 // static void PlayC2S_crafting_grid(player_t *currentPlayer){}
-void (*c2s_1_19_4_1_20_1[])(player_t *currentPlayer) = {
+
+static void ConfigurationC2S_settings(player_t *currentPlayer) {}
+static void ConfigurationC2S_channel(player_t *currentPlayer) {}
+static void ConfigurationC2S_ready(player_t *currentPlayer)
+{
+  currentPlayer->active = 1;
+  currentPlayer->spawn_event = 1;
+  currentPlayer->handshake_status = 4;
+}
+static void ConfigurationC2S_heartbeat(player_t *currentPlayer) {}
+static void ConfigurationC2S_pong(player_t *currentPlayer) {}
+static void ConfigurationC2S_resourcepack(player_t *currentPlayer) {}
+
+void (*c2s_play_1_20_4_1_20_4[])(player_t *currentPlayer) = {
     &PlayC2S_confirm_teleport,
     &PlayC2S_block_nbt,
     &PlayC2S_difficulty,
@@ -169,12 +186,15 @@ void (*c2s_1_19_4_1_20_1[])(player_t *currentPlayer) = {
     &PlayC2S_command,
     &PlayC2S_signed_chat_message,
     &PlayC2S_session_data,
+    &PlayC2S_next_chunk_batch,
     &PlayC2S_client_action,
     &PlayC2S_settings,
     &PlayC2S_command_suggestions,
+    &PlayC2S_reconfigure,
     &PlayC2S_container_button,
     &PlayC2S_container_click,
     &PlayC2S_close_container,
+    &PlayC2S_crafter_slot_lock,
     &PlayC2S_channel,
     &PlayC2S_book,
     &PlayC2S_entity_nbt,
@@ -189,6 +209,7 @@ void (*c2s_1_19_4_1_20_1[])(player_t *currentPlayer) = {
     &PlayC2S_move_vehicle,
     &PlayC2S_steer_boat,
     &PlayC2S_item_pick,
+    &PlayC2S_ping,
     &PlayC2S_crafting_recipe,
     &PlayC2S_toggle_fly,
     &PlayC2S_player_action,
@@ -218,3 +239,10 @@ void (*c2s_1_19_4_1_20_1[])(player_t *currentPlayer) = {
     0,
     0,
     0};
+void (*c2s_configuration_1_20_4_1_20_4[])(player_t *currentPlayer) = {
+    &ConfigurationC2S_settings,
+    &ConfigurationC2S_channel,
+    &ConfigurationC2S_ready,
+    &ConfigurationC2S_heartbeat,
+    &ConfigurationC2S_pong,
+    &ConfigurationC2S_resourcepack};

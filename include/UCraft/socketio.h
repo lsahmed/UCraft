@@ -74,6 +74,7 @@ uint8_t sendAllowed();
 void sendStart();
 void sendByte(uint8_t b);
 void sendPlayPacketHeader(size_t id);
+void sendConfigurationPacketHeader(size_t id);
 void sendBuffer(const char *buf, size_t len);
 void sendInt(int32_t v);
 void sendShort(int16_t v);
