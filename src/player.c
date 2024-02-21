@@ -130,11 +130,6 @@ int playerCheckName(player_t *player)
     {
       return 1;
     }
-    // make it lower case
-    if (player->playername[i] >= 'A' && player->playername[i] <= 'Z')
-    {
-      player->playername[i] += 32;
-    }
   }
   return 0;
 }
