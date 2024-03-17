@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <sys/select.h>
 #include <signal.h>
@@ -21,6 +22,12 @@ static inline int U_fctl(int fd, int cmd, int arg)
 static inline void U_usleep(useconds_t usec)
 {
     usleep(usec);
+}
+static inline uint64_t micros()
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
 }
 // Networking functions
 static inline int U_socket(int domain, int type, int protocol)

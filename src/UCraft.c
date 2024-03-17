@@ -240,7 +240,7 @@ static void s2cHandler()
                 if (p != currentPlayer && p->active)
                 {
                     PlayS2Ctablist(p, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, p->player_id);
-                    PlayS2Cspawnentity(p,ENTITY_METADATA_TYPE_PLAYER);
+                    PlayS2Cspawnentity(p, ENTITY_METADATA_TYPE_PLAYER);
                     PlayS2Centitydata(p, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, p->skin_parts); // enable from cape to hat
                 }
             }
@@ -274,7 +274,7 @@ static void s2cHandler()
             }
             if (currentPlayer->chunk_z > CHUNK_SIZE)
             {
-                PlayS2Cgameevent(EVENT_WAIT_LEVEL_CHUNKS,1.0f);
+                PlayS2Cgameevent(EVENT_WAIT_LEVEL_CHUNKS, 1.0f);
                 currentPlayer->chunk_x = 0;
                 currentPlayer->chunk_z = 0;
                 currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
@@ -404,7 +404,7 @@ static void s2cHandler()
             if (currentPlayer->logged_on)
             {
                 PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, currentPlayer->player_id);
-                PlayS2Cspawnentity(currentPlayer,ENTITY_METADATA_TYPE_PLAYER);
+                PlayS2Cspawnentity(currentPlayer, ENTITY_METADATA_TYPE_PLAYER);
                 PlayS2Centitydata(currentPlayer, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, currentPlayer->skin_parts); // enable from cape to hat
                 currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
                 currentPlayer->send_chat_login_event = 1;
@@ -604,6 +604,7 @@ int UCraftStart(uint8_t *cleanup_flag)
     gamePreload();
     while (1)
     {
+        uint64_t startms = micros();
         if (*cleanup_flag)
         {
             break;
@@ -696,8 +697,15 @@ int UCraftStart(uint8_t *cleanup_flag)
             }
         }
         s2cHandler();
-        // TODO: this is not how you tick
-        U_usleep(10000); // need to tick 20 times a second
+        uint64_t endms = micros();
+        if ((endms - startms) < TICK_TIME_US)
+        {
+            U_usleep(TICK_TIME_US - (endms - startms));
+        }
+        else
+        {
+            printl(LOG_WARN, "Server is lagging over %ldus\n", (endms - startms) - TICK_TIME_US);
+        }
         main_tick++;
     }
     UCraftCleanup();
