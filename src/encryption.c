@@ -124,7 +124,7 @@ void LoginC2S_encryption_response()
         return;
     }
     readBuffer((char *)encrypted, sizeof(encrypted));
-    ret = mbedtls_rsa_rsaes_pkcs1_v15_decrypt(mbedtls_pk_rsa(encryptionData.key), mbedtls_ctr_drbg_random, &encryptionData.ctr_drbg, MBEDTLS_RSA_PRIVATE, &decrypted_size, encrypted, decrypted, sizeof(decrypted));
+    ret = mbedtls_rsa_rsaes_pkcs1_v15_decrypt(mbedtls_pk_rsa(encryptionData.key), mbedtls_ctr_drbg_random, &encryptionData.ctr_drbg, &decrypted_size, encrypted, decrypted, sizeof(decrypted));
     if (ret != 0)
     {
         printl(LOG_WARN, "mbedtls_rsa_rsaes_oaep_decrypt failed! %d\n", ret);
@@ -146,7 +146,7 @@ void LoginC2S_encryption_response()
         return;
     }
     readBuffer((char *)encrypted, sizeof(encrypted));
-    ret = mbedtls_rsa_rsaes_pkcs1_v15_decrypt(mbedtls_pk_rsa(encryptionData.key), mbedtls_ctr_drbg_random, &encryptionData.ctr_drbg,MBEDTLS_RSA_PRIVATE, &decrypted_size, encrypted, decrypted, sizeof(decrypted));
+    ret = mbedtls_rsa_rsaes_pkcs1_v15_decrypt(mbedtls_pk_rsa(encryptionData.key), mbedtls_ctr_drbg_random, &encryptionData.ctr_drbg, &decrypted_size, encrypted, decrypted, sizeof(decrypted));
     if (ret != 0)
     {
         printl(LOG_WARN, "mbedtls_rsa_rsaes_oaep_decrypt failed! %d\n", ret);
