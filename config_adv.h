@@ -3,7 +3,7 @@
 
 #define ENDIAN 1 // 1: little, 0:big
 
-#define TICK_TIME_US 20000
+#define TICK_TIME_US 10000
 #define MEM_CHUNK_SIZE 512 //Allocation granularity 
 #define MEM_CHUNK_THRESHOLD 4 //Number of chunks to allocate before reallocating
 
