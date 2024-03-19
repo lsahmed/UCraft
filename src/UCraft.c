@@ -496,7 +496,7 @@ static void s2cHandler()
             if (currentPlayer->send_chat_login_event)
             {
                 char join_msg[64];
-                snprintf(join_msg, sizeof(join_msg), "\u00A7e%s has joined the game", currentPlayer->playername);
+                snprintf(join_msg, sizeof(join_msg), "§e%s has joined the game", currentPlayer->playername);
                 PlayS2Cunsignedchatmessage(join_msg, strnlen(join_msg, sizeof(join_msg)));
                 currentPlayer->send_chat_login_event = 0;
             }
@@ -516,7 +516,7 @@ static void s2cHandler()
         if (playerGetActiveCount() > 0)
         {
             char left_msg[64];
-            snprintf(left_msg, sizeof(left_msg), "\u00A7e%s has left the game", disconnected->name);
+            snprintf(left_msg, sizeof(left_msg), "§e%s has left the game", disconnected->name);
             PlayS2Cunsignedchatmessage(left_msg, strnlen(left_msg, sizeof(left_msg)));
             PlayS2Ctablistremove(disconnected->id);
             PlayS2Centitydestroy(disconnected->id);
@@ -543,6 +543,7 @@ void UCraftCleanup()
     {
         U_close(server_fd);
     }
+    U_wrapperEnd();
 }
 int UCraftStart(uint8_t *cleanup_flag)
 {
@@ -553,6 +554,7 @@ int UCraftStart(uint8_t *cleanup_flag)
     struct timeval timeout;
     int rv;
     int max_sock = 0;
+    U_wrapperStart();
     if (cleanup_flag == NULL)
     {
         printl(LOG_ERROR, "Cleanup flag is NULL\n");
@@ -622,11 +624,11 @@ int UCraftStart(uint8_t *cleanup_flag)
             {
                 int new_socket = U_accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
                 // set the socket non blocking
-                if (U_fctl(new_socket, F_SETFL, U_fctl(new_socket, F_GETFL, 0) | O_NONBLOCK))
-                {
-                    printl(LOG_ERROR, "Failed to set socket non blocking\n");
+                if(U_setsocknonblock(new_socket) < 0)
+				{
+					printl(LOG_ERROR, "setsocknonblock error\n");
                     break;
-                }
+				}
                 if (new_socket > max_sock)
                 {
                     max_sock = new_socket;
@@ -661,7 +663,7 @@ int UCraftStart(uint8_t *cleanup_flag)
                 {
                     readPacketVars_t *readPacketValue = readValues();
                     readPacketValue->bufferpos = 0;
-                    ssize_t read_size = U_read(player->player_fd, readPacketValue->buffer, READBUFSIZE);
+                    ssize_t read_size = U_recv(player->player_fd, readPacketValue->buffer, READBUFSIZE,0);
                     if (read_size <= 0 || player->player_fd < 0)
                     {
                         // printl(LOG_WARN,"Connection closed %d fd:%d\n", player->handshake_status,

@@ -1,5 +1,4 @@
-#include <stdint.h>
-#include <unistd.h>
+#include "wrapper.h"
 // this is the codec for the client which defines inital properties for the game, see utils/codec
 const uint8_t __codec_nbt[] = {
 	0x0A, 0x0A, 0x00, 0x0E, 0x64, 0x69, 0x6D, 0x65, 0x6E, 0x73, 0x69, 0x6F,

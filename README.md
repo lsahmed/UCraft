@@ -5,7 +5,7 @@ The current server supports **1.20.4** for the client.
 NOTE: This is a weekend project so i do not recommend using this for production as this is guranteed to have bugs and the general source code quality lacks in consistency. 
 
 ### Building
-The server was built and tested on a linux machine. Windows is not supported
+The server was built and tested on a linux machine. To build on a Windows machine, MSVC is required.
 ```
 $ sudo apt install git build-essential cmake make
 $ git clone https://github.com/vimpop/UCraft/

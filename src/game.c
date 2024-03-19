@@ -231,7 +231,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
 
             if (currentPlayer->gamePlayerData.isPlaying)
             {
-                printChatFormatted("\u00A7a%s \u00A7ehas won the game!", currentPlayer->playername);
+                printChatFormatted("§a%s §ehas won the game!", currentPlayer->playername);
                 memset(gameData.blocks, 0xff, sizeof(gameData.blocks));
                 drawArena(currentPlayer, 0, 0, 0);
                 gameData.isStarted = 0;
@@ -312,7 +312,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
                 currentPlayer->gamemode = 3;
                 PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->player_id);
                 updatePlayerCount();
-                printChatFormatted("\u00A7a%s \u00A7ffell down (%ld/%ld)", currentPlayer->playername, gameData.players, gameData.initalPlayers);
+                printChatFormatted("§a%s §ffell down (%ld/%ld)", currentPlayer->playername, gameData.players, gameData.initalPlayers);
                 PlayS2Cteleport(currentPlayer, gameData.centerX, gameData.centerY + 2, gameData.centerZ);
                 currentPlayer->teleport = 1;
             }

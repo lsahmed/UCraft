@@ -1,8 +1,7 @@
 #ifndef _GAME_H
 #define _GAME_H
 #include "config.h"
-#include <stdint.h>
-#include <unistd.h>
+#include "wrapper.h"
 
 typedef struct player_t player_t;
 

@@ -8,7 +8,6 @@
 
 #include "wrapper.h"
 #include <string.h>
-#include <netdb.h>
 #include <time.h>
 
 #ifdef ONLINE_MODE
