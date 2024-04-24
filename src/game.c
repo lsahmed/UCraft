@@ -238,6 +238,9 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
                 currentPlayer->gamePlayerData.isSpectating = 1;
                 currentPlayer->gamePlayerData.bx = 0;
                 currentPlayer->gamePlayerData.bz = 0;
+                currentPlayer->ability = ABILILTIES_CAN_FLY | ABILILTIES_FLYING;
+                currentPlayer->gamemode = 3;
+                PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->player_id);
             }
             return;
         }
