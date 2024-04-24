@@ -51,7 +51,7 @@ static uint8_t getBlock(int32_t x, int32_t z)
     }
     return 0;
 }
-static void drawArena(player_t *currentPlayer, int32_t centerX, int32_t centerY, int32_t centerZ)
+static void drawArena(int32_t centerX, int32_t centerY, int32_t centerZ)
 {
     int32_t x = 0;
     int32_t z = 0;
@@ -71,16 +71,16 @@ static void drawArena(player_t *currentPlayer, int32_t centerX, int32_t centerY,
                 {
                     if ((distanceSquared % 5) == 0)
                     {
-                        PlayS2Cblock(currentPlayer, MINECRAFT_SAND, x, centerY, z);
+                        PlayS2Cblock(MINECRAFT_SAND, x, centerY, z);
                     }
                     else
                     {
-                        PlayS2Cblock(currentPlayer, MINECRAFT_RED_SAND, x, centerY, z);
+                        PlayS2Cblock(MINECRAFT_RED_SAND, x, centerY, z);
                     }
                 }
                 else
                 {
-                    PlayS2Cblock(currentPlayer, MINECRAFT_AIR, x, centerY, z);
+                    PlayS2Cblock(MINECRAFT_AIR, x, centerY, z);
                 }
             }
             // construct the border
@@ -88,7 +88,7 @@ static void drawArena(player_t *currentPlayer, int32_t centerX, int32_t centerY,
             {
                 for (int i = -1; i < 3; i++)
                 {
-                    PlayS2Cblock(currentPlayer, MINECRAFT_SANDSTONE, x, centerY + i, z);
+                    PlayS2Cblock(MINECRAFT_SANDSTONE, x, centerY + i, z);
                 }
             }
         }
@@ -160,16 +160,16 @@ static void startGame(size_t playerCount)
         }
         gameData.startDelay--;
     }
-    else
+    // check for a deadlock
+    if ((gameData.players == 0) && gameData.initalPlayers)
     {
-        // check for a deadlock
-        if ((gameData.players == 0) && gameData.initalPlayers)
-        {
-            gameData.isStarted = 0;
-            gameData.initalPlayers = 0;
-            gameData.players = 0;
-            gameData.initalPlayers = 0;
-        }
+        printl(LOG_WARN, "deadlock, resting game state\n");
+        memset(gameData.blocks, 0xff, sizeof(gameData.blocks));
+        drawArena(0, 0, 0);
+        gameData.isStarted = 0;
+        gameData.initalPlayers = 0;
+        gameData.players = 0;
+        gameData.startDelay = 1000;
     }
 }
 // fired when the server is about to start
@@ -183,7 +183,7 @@ void gameChunkLoaded(player_t *currentPlayer)
 {
     currentPlayer->gamePlayerData.isSpectating = 1;
     currentPlayer->ability = ABILILTIES_CAN_FLY | ABILILTIES_FLYING;
-    drawArena(currentPlayer, 0, 0, 0);
+    drawArena(0, 0, 0);
 }
 // fired when a player leaves
 void gamePlayerLeft(player_t *currentPlayer)
@@ -230,11 +230,10 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
             {
                 printChatFormatted("§a%s §ehas won the game!", currentPlayer->playername);
                 memset(gameData.blocks, 0xff, sizeof(gameData.blocks));
-                drawArena(currentPlayer, 0, 0, 0);
+                drawArena(0, 0, 0);
                 gameData.isStarted = 0;
                 gameData.initalPlayers = 0;
                 gameData.players = 0;
-                gameData.initalPlayers = 0;
                 currentPlayer->gamePlayerData.isPlaying = 0;
                 currentPlayer->gamePlayerData.isSpectating = 1;
                 currentPlayer->gamePlayerData.bx = 0;
@@ -254,7 +253,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
                 {
                     currentPlayer->gamePlayerData.ongroundtimeout++;
                 }
-                //player is in some corner, so get rid of the blocks
+                // player is in some corner, so get rid of the blocks
                 if (currentPlayer->gamePlayerData.ongroundtimeout > 70)
                 {
                     for (int32_t i = -1; i < 2; i++)
@@ -264,24 +263,24 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
                             if (getBlock(x + i, z + j))
                             {
                                 setBlock(x + i, z + j, 0);
-                                PlayS2Cblock(currentPlayer, MINECRAFT_AIR, x + i, gameData.centerY, z + j);
+                                PlayS2Cblock(MINECRAFT_AIR, x + i, gameData.centerY, z + j);
                             }
                         }
                     }
-                    currentPlayer->gamePlayerData.ongroundtimeout = 0;  
+                    currentPlayer->gamePlayerData.ongroundtimeout = 0;
                 }
                 if (getBlock(x, z))
                 {
                     if (currentPlayer->gamePlayerData.timeout > 40)
                     {
                         setBlock(x, z, 0);
-                        PlayS2Cblock(currentPlayer, MINECRAFT_AIR, x, gameData.centerY, z);
+                        PlayS2Cblock(MINECRAFT_AIR, x, gameData.centerY, z);
                         currentPlayer->gamePlayerData.timeout = 0;
                     }
                     if (currentPlayer->gamePlayerData.bx != x || currentPlayer->gamePlayerData.bz != z)
                     {
                         setBlock(currentPlayer->gamePlayerData.bx, currentPlayer->gamePlayerData.bz, 0);
-                        PlayS2Cblock(currentPlayer, MINECRAFT_AIR, currentPlayer->gamePlayerData.bx, gameData.centerY, currentPlayer->gamePlayerData.bz);
+                        PlayS2Cblock(MINECRAFT_AIR, currentPlayer->gamePlayerData.bx, gameData.centerY, currentPlayer->gamePlayerData.bz);
                         currentPlayer->gamePlayerData.bx = x;
                         currentPlayer->gamePlayerData.bz = z;
                         currentPlayer->gamePlayerData.timeout = 0;
@@ -294,7 +293,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
                     // check if the player is unscyned
                     if (currentPlayer->onground)
                     {
-                        PlayS2Cblock(currentPlayer, MINECRAFT_AIR, x, gameData.centerY, z);
+                        PlayS2Cblock(MINECRAFT_AIR, x, gameData.centerY, z);
                     }
                 }
             }

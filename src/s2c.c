@@ -427,7 +427,7 @@ void PlayS2Centitydestroy(int32_t eid)
   sendVarInt(eid);
   sendDone();
 }
-void PlayS2Cblock(player_t *currentPlayer, blocksDefaultState blockstate, int32_t x, int32_t y, int32_t z)
+void PlayS2Cblock(blocksDefaultState blockstate, int32_t x, int32_t y, int32_t z)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_BLOCK);

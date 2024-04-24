@@ -192,7 +192,7 @@ void PlayS2Csignedchatmessage(player_t *currentPlayer, char *message,
 void PlayS2Cunsignedchatmessage(char *message,
                                 size_t len);
 void PlayS2Centitydestroy(int32_t eid);
-void PlayS2Cblock(player_t *currentPlayer, blocksDefaultState blockstate, int32_t x, int32_t y, int32_t z);
+void PlayS2Cblock(blocksDefaultState blockstate, int32_t x, int32_t y, int32_t z);
 void PlayS2Cblockbreak(player_t *currentPlayer, int32_t sequence);
 void PlayS2Cbossbar(player_t *currentPlayer, uint16_t uuid, int32_t action,
                     char *title, size_t len, float health);
