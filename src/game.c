@@ -94,25 +94,22 @@ static void drawArena(player_t *currentPlayer, int32_t centerX, int32_t centerY,
         }
     }
 }
-// ready every player who is spectating
-static void readySpectators()
+// ready every player
+static void readyPlayers()
 {
     player_t *currentPlayer = playerGetHead();
     size_t count = 0;
     while (currentPlayer != NULL)
     {
-        if (currentPlayer->gamePlayerData.isSpectating)
-        {
-            currentPlayer->gamePlayerData.isSpectating = 0;
-            currentPlayer->gamePlayerData.isPlaying = 1;
-            currentPlayer->gamePlayerData.bx = 0;
-            currentPlayer->gamePlayerData.bz = 0;
-            currentPlayer->ability = ABILILTIES_CLEAR;
-            currentPlayer->gamemode = 2;
-            PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->player_id);
-            count++;
-        }
+        currentPlayer->gamePlayerData.isSpectating = 0;
+        currentPlayer->gamePlayerData.isPlaying = 1;
+        currentPlayer->gamePlayerData.bx = 0;
+        currentPlayer->gamePlayerData.bz = 0;
+        currentPlayer->ability = ABILILTIES_CLEAR;
+        currentPlayer->gamemode = 2;
+        PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->player_id);
         currentPlayer = currentPlayer->next;
+        count++;
     }
     gameData.initalPlayers = count;
     gameData.players = count;
@@ -153,7 +150,7 @@ static void startGame(size_t playerCount)
         }
         if (gameData.startDelay == 500)
         {
-            readySpectators();
+            readyPlayers();
             // this will brodcast to all the players
             PlayS2Cpositionrotation(playerGetHead(), gameData.centerX, gameData.centerY + 2, gameData.centerZ);
         }
