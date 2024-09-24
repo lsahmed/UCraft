@@ -5,6 +5,8 @@ static void PlayC2S_block_nbt(player_t *currentPlayer) {}
 static void PlayC2S_difficulty(player_t *currentPlayer) {}
 static void PlayC2S_message_acknowledgement(player_t *currentPlayer) {}
 static void PlayC2S_command(player_t *currentPlayer) {}
+static void PlayC2S_signed_command(player_t *currentPlayer) {}
+
 static char chat_buffer[300];
 uint8_t chat_inuse = 0;
 static void PlayC2S_signed_chat_message(player_t *currentPlayer)
@@ -79,8 +81,9 @@ static void PlayC2S_container_button(player_t *currentPlayer) {}
 static void PlayC2S_container_click(player_t *currentPlayer) {}
 static void PlayC2S_close_container(player_t *currentPlayer) {}
 static void PlayC2S_crafter_slot_lock(player_t *currentPlayer) {}
+static void PlayC2S_cookie_response(player_t *currentPlayer) {}
 static void PlayC2S_channel(player_t *currentPlayer) {}
-// static void PlayC2S_plugin(player_t *currentPlayer) {}
+static void PlayC2S_debug_sample_subscription(player_t *currentPlayer) {}
 static void PlayC2S_book(player_t *currentPlayer) {}
 static void PlayC2S_entity_nbt(player_t *currentPlayer) {}
 static void PlayC2S_entity_interact(player_t *currentPlayer) {}
@@ -134,7 +137,6 @@ static void PlayC2S_entity_action(player_t *currentPlayer)
   }
 }
 static void PlayC2S_vehicle_input(player_t *currentPlayer) {}
-// static void PlayC2S_steer_vehicle(player_t *currentPlayer) {}
 static void PlayC2S_pong(player_t *currentPlayer) {}
 static void PlayC2S_session_data(player_t *currentPlayer) {}
 static void PlayC2S_next_chunk_batch(player_t *currentPlayer) {}
@@ -160,13 +162,9 @@ static void PlayC2S_swing_arm(player_t *currentPlayer)
 static void PlayC2S_entity_spectate(player_t *currentPlayer) {}
 static void PlayC2S_block_interact(player_t *currentPlayer) {}
 static void PlayC2S_use_item(player_t *currentPlayer) {}
-// static void PlayC2S_legacy_message_acknowledgement(player_t *currentPlayer){}
-// static void PlayC2S_chat_preview(player_t *currentPlayer) {}
-// static void PlayC2S_chat_message(player_t *currentPlayer){}
-// static void PlayC2S_container_action(player_t *currentPlayer){}
-// static void PlayC2S_crafting_grid(player_t *currentPlayer){}
 
 static void ConfigurationC2S_settings(player_t *currentPlayer) {}
+static void ConfigurationC2S_cookie_response(player_t *currentPlayer) {}
 static void ConfigurationC2S_channel(player_t *currentPlayer) {}
 static void ConfigurationC2S_ready(player_t *currentPlayer)
 {
@@ -177,13 +175,18 @@ static void ConfigurationC2S_ready(player_t *currentPlayer)
 static void ConfigurationC2S_heartbeat(player_t *currentPlayer) {}
 static void ConfigurationC2S_pong(player_t *currentPlayer) {}
 static void ConfigurationC2S_resourcepack(player_t *currentPlayer) {}
+static void ConfigurationC2S_known_pack(player_t *currentPlayer)
+{
+  currentPlayer->configuration_known_packs_ack_event = 1;
+}
 
-void (*c2s_play_1_20_4_1_20_4[])(player_t *currentPlayer) = {
+void (*c2s_play_1_20_5_1_21_1[])(player_t *currentPlayer) = {
     &PlayC2S_confirm_teleport,
     &PlayC2S_block_nbt,
     &PlayC2S_difficulty,
     &PlayC2S_message_acknowledgement,
     &PlayC2S_command,
+    &PlayC2S_signed_command,
     &PlayC2S_signed_chat_message,
     &PlayC2S_session_data,
     &PlayC2S_next_chunk_batch,
@@ -195,7 +198,9 @@ void (*c2s_play_1_20_4_1_20_4[])(player_t *currentPlayer) = {
     &PlayC2S_container_click,
     &PlayC2S_close_container,
     &PlayC2S_crafter_slot_lock,
+    &PlayC2S_cookie_response,
     &PlayC2S_channel,
+    &PlayC2S_debug_sample_subscription,
     &PlayC2S_book,
     &PlayC2S_entity_nbt,
     &PlayC2S_entity_interact,
@@ -234,15 +239,13 @@ void (*c2s_play_1_20_4_1_20_4[])(player_t *currentPlayer) = {
     &PlayC2S_entity_spectate,
     &PlayC2S_block_interact,
     &PlayC2S_use_item,
-    0,
-    0,
-    0,
-    0,
-    0};
-void (*c2s_configuration_1_20_4_1_20_4[])(player_t *currentPlayer) = {
+};
+void (*c2s_configuration_1_20_5_1_21_1[])(player_t *currentPlayer) = {
     &ConfigurationC2S_settings,
+    &ConfigurationC2S_cookie_response,
     &ConfigurationC2S_channel,
     &ConfigurationC2S_ready,
     &ConfigurationC2S_heartbeat,
     &ConfigurationC2S_pong,
-    &ConfigurationC2S_resourcepack};
+    &ConfigurationC2S_resourcepack,
+    &ConfigurationC2S_known_pack};

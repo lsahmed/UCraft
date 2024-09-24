@@ -1,4 +1,4 @@
-add_executable(${PROJECT_NAME} main.c UCraft.c socketio.c player.c c2s.c s2c.c util.c log.c blobs/codec.c encryption.c https.c game.c)
+add_executable(${PROJECT_NAME} main.c UCraft.c socketio.c player.c c2s.c s2c.c util.c log.c  encryption.c https.c game.c)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include/UCraft)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR})
 

@@ -140,6 +140,9 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
                 currentPlayer->encryption_recv_event = 1;
 #endif /*ONLINE_MODE*/
                 break;
+            case 3: // Login Acknowledged
+                currentPlayer->configuration_event = 1;
+                currentPlayer->handshake_status = 3;
             default:
                 break;
             }
@@ -147,7 +150,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
         case 3: // config state
             if (cmd < C2S_CONFIGURATION_MAPPING_LEN)
             {
-                void (**packet_handler)(player_t *) = c2s_configuration_1_20_4_1_20_4;
+                void (**packet_handler)(player_t *) = c2s_configuration_1_20_5_1_21_1;
                 if (packet_handler[cmd] != NULL)
                 {
                     if (*packet_handler[cmd] != NULL)
@@ -160,7 +163,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
         case 4: // play state
             if (cmd < C2S_PLAY_MAPPING_LEN)
             {
-                void (**packet_handler)(player_t *) = c2s_play_1_20_4_1_20_4;
+                void (**packet_handler)(player_t *) = c2s_play_1_20_5_1_21_1;
                 if (packet_handler[cmd] != NULL)
                 {
                     if (*packet_handler[cmd] != NULL)
@@ -230,7 +233,7 @@ static void s2cHandler()
 #endif /*ONLINE_MODE_AUTH*/
         if (currentPlayer->spawn_event)
         {
-            PlayS2Cjoingame(currentPlayer);
+            PlayS2Clogin(currentPlayer);
             PlayS2Cheartbeat(currentPlayer);
             PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED | TABLIST_ACTION_LATENCY, currentPlayer->player_id);
             PlayS2Centitydata(currentPlayer, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, currentPlayer->skin_parts); // enable from cape to hat
@@ -252,10 +255,16 @@ static void s2cHandler()
             currentPlayer->logged_on = 1;
             currentPlayer->spawn_event = 0;
         }
-        if (currentPlayer->configuration_event)
+        if (currentPlayer->configuration_known_packs_ack_event)
         {
             ConfigurationS2Cregistry();
             ConfigurationS2Cready();
+            currentPlayer->configuration_known_packs_ack_event = 0;
+        }
+        if (currentPlayer->configuration_event)
+        {
+            ConfigurationS2Cfeatures();
+            ConfigurationS2Cknownpacks();
             currentPlayer->configuration_event = 0;
         }
         if (currentPlayer->chunk_next_event)
@@ -300,8 +309,6 @@ static void s2cHandler()
             httpsFreePlayer(currentPlayer);
 #endif /*ONLINE_MODE_AUTH*/
             currentPlayer->login_event = 0;
-            currentPlayer->handshake_status = 3;
-            currentPlayer->configuration_event = 1;
         }
         if (currentPlayer->ingame && currentPlayer->active)
         {
@@ -400,13 +407,13 @@ static void s2cHandler()
             sendStartPlayer(currentPlayer);
             // Global context, send to all clients
             sendSwitchToGlobalBuffer();
+            currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
             // add current player to the the tablist as well
             if (currentPlayer->logged_on)
             {
                 PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, currentPlayer->player_id);
                 PlayS2Cspawnentity(currentPlayer, ENTITY_METADATA_TYPE_PLAYER);
                 PlayS2Centitydata(currentPlayer, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, currentPlayer->skin_parts); // enable from cape to hat
-                currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
                 currentPlayer->send_chat_login_event = 1;
                 currentPlayer->ready_to_play = 1;
                 currentPlayer->logged_on = 0;
@@ -446,7 +453,6 @@ static void s2cHandler()
                     currentPlayer->pyaw = currentPlayer->yaw;
                     currentPlayer->pitch = currentPlayer->ppitch;
                 }
-                currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
                 currentPlayer->position_event = 0;
             }
             if (currentPlayer->swing_arm_event)
@@ -462,7 +468,6 @@ static void s2cHandler()
                 default:
                     break;
                 }
-                currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
                 currentPlayer->swing_arm_event = 0;
             }
             if (currentPlayer->entity_action_event)
@@ -477,16 +482,17 @@ static void s2cHandler()
                 default:
                     break;
                 }
-                currentPlayer->global_buffer_start_index = sendGetGlobalBufferIndex();
                 currentPlayer->entity_action_event = 0;
             }
+            currentPlayer->global_buffer_end_index = sendGetGlobalBufferIndex();
+            // Code below will brodcast to current player and the rest of the players while above will be for other players only
             if (currentPlayer->chat_event)
             {
                 if (currentPlayer->chat_ptr)
                 {
                     if (chat_inuse)
                     {
-                        PlayS2Cunsignedchatmessage(currentPlayer->chat_ptr, currentPlayer->chat_len);
+                        PlayS2Csysmessage(currentPlayer->chat_ptr, currentPlayer->chat_len);
                         printl(LOG_INFO, "%s\n", currentPlayer->chat_ptr);
                     }
                     chat_inuse = 0;
@@ -497,7 +503,7 @@ static void s2cHandler()
             {
                 char join_msg[64];
                 snprintf(join_msg, sizeof(join_msg), "§e%s has joined the game", currentPlayer->playername);
-                PlayS2Cunsignedchatmessage(join_msg, strnlen(join_msg, sizeof(join_msg)));
+                PlayS2Csysmessage(join_msg, strnlen(join_msg, sizeof(join_msg)));
                 currentPlayer->send_chat_login_event = 0;
             }
             if (currentPlayer->settings_changed_event)
@@ -517,7 +523,7 @@ static void s2cHandler()
         {
             char left_msg[64];
             snprintf(left_msg, sizeof(left_msg), "§e%s has left the game", disconnected->name);
-            PlayS2Cunsignedchatmessage(left_msg, strnlen(left_msg, sizeof(left_msg)));
+            PlayS2Csysmessage(left_msg, strnlen(left_msg, sizeof(left_msg)));
             PlayS2Ctablistremove(disconnected->id);
             PlayS2Centitydestroy(disconnected->id);
         }
@@ -606,7 +612,7 @@ int UCraftStart(uint8_t *cleanup_flag)
     gamePreload();
     while (1)
     {
-        uint64_t startms = micros();
+        uint64_t startms = U_millis();
         if (*cleanup_flag)
         {
             break;
@@ -624,11 +630,11 @@ int UCraftStart(uint8_t *cleanup_flag)
             {
                 int new_socket = U_accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
                 // set the socket non blocking
-                if(U_setsocknonblock(new_socket) < 0)
-				{
-					printl(LOG_ERROR, "setsocknonblock error\n");
+                if (U_setsocknonblock(new_socket) < 0)
+                {
+                    printl(LOG_ERROR, "setsocknonblock error\n");
                     break;
-				}
+                }
                 if (new_socket > max_sock)
                 {
                     max_sock = new_socket;
@@ -663,7 +669,7 @@ int UCraftStart(uint8_t *cleanup_flag)
                 {
                     readPacketVars_t *readPacketValue = readValues();
                     readPacketValue->bufferpos = 0;
-                    ssize_t read_size = U_recv(player->player_fd, readPacketValue->buffer, READBUFSIZE,0);
+                    ssize_t read_size = U_recv(player->player_fd, readPacketValue->buffer, READBUFSIZE, 0);
                     if (read_size <= 0 || player->player_fd < 0)
                     {
                         // printl(LOG_WARN,"Connection closed %d fd:%d\n", player->handshake_status,
@@ -699,14 +705,14 @@ int UCraftStart(uint8_t *cleanup_flag)
             }
         }
         s2cHandler();
-        uint64_t endms = micros();
-        if ((endms - startms) < TICK_TIME_US)
+        uint64_t endms = U_millis();
+        if ((endms - startms) < TICK_TIME_MS)
         {
-            U_usleep(TICK_TIME_US - (endms - startms));
+            U_sleep(TICK_TIME_MS - (endms - startms));
         }
         else
         {
-            printl(LOG_WARN, "Server is lagging over %ldus\n", (endms - startms) - TICK_TIME_US);
+            printl(LOG_WARN, "Server is lagging over %ldms\n", (endms - startms) - TICK_TIME_MS);
         }
         main_tick++;
     }

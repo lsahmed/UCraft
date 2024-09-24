@@ -45,13 +45,17 @@ static inline void U_wrapperEnd()
     WSACleanup();
 }
 
-static inline void U_usleep(int usec)
+static inline void U_sleep(int msec)
 {
-    Sleep(usec / 1000);
+    Sleep(msec);
 }
-static inline uint64_t micros()
+static inline uint64_t U_millis()
 {
-    return GetTickCount64() * 1000;
+    LARGE_INTEGER tick, tps;
+    QueryPerformanceFrequency(&tps);
+    QueryPerformanceCounter(&tick);
+    int msPassed = (tick.QuadPart) * 1000 / tps.QuadPart;
+    return msPassed;
 }
 // Networking functions
 static inline int U_socket(int domain, int type, int protocol)

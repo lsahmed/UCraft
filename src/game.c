@@ -16,7 +16,7 @@ void printChatFormatted(char *fmt, ...)
     va_list args;
     va_start(args, fmt);
     vsnprintf(buf, sizeof(buf), fmt, args);
-    PlayS2Cunsignedchatmessage(buf, strnlen(buf, sizeof(buf)));
+    PlayS2Csysmessage(buf, strnlen(buf, sizeof(buf)));
     va_end(args);
 }
 static uint8_t isPlayerInArena(player_t *currentPlayer)

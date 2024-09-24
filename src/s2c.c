@@ -78,6 +78,7 @@ void LoginS2Cencryptionrequest(player_t *currentPlayer)
   memcpy(currentPlayer->verify_token, token, sizeof(token));
   sendVarInt(4);
   sendBuffer(token, 4);
+  sendByte(1);
   sendDone();
 }
 #endif /*ONLINE_MODE*/
@@ -111,35 +112,37 @@ void LoginS2Csuccess(player_t *currentPlayer)
   }
 #else
   sendVarInt(0); // Number Of Properties
-#endif /*ONLINE_MODE_AUTH*/
+#endif         /*ONLINE_MODE_AUTH*/
+  sendByte(1); // Strict error checking
   sendDone();
 }
 // Play packets
 
-void PlayS2Cjoingame(player_t *currentPlayer)
+void PlayS2Clogin(player_t *currentPlayer)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_INITIALIZE);
   sendInt(currentPlayer->player_id);
-  sendByte(0);                           // Is hardcore
-  sendVarInt(1);                         // World Count
-  sendString("world", -1);               // Dimension Names
-  sendVarInt(MAX_PLAYERS);               // Max Players
-  sendVarInt(VIEWDISTANCE);              // viewdistance
-  sendVarInt(VIEWDISTANCE);              // simulationdistance
-  sendByte(0);                           // Reduced Debug Info
-  sendByte(1);                           // Enable respawn screen
-  sendByte(0);                           // Do limited crafting
-  sendString("minecraft:overworld", -1); // Dimension Type
-  sendString("minecraft:overworld", -1); // Dimension Name
-  sendLong(0x482304890);                 //{hashedSeed} random bytes
-  sendByte(GAMEMODE);                    // gamemode
+  sendByte(0);                 // Is hardcore
+  sendVarInt(1);               // World Count
+  sendString("overworld", -1); // Dimension Names
+  sendVarInt(MAX_PLAYERS);     // Max Players
+  sendVarInt(VIEWDISTANCE);    // viewdistance
+  sendVarInt(VIEWDISTANCE);    // simulationdistance
+  sendByte(0);                 // Reduced Debug Info
+  sendByte(1);                 // Enable respawn screen
+  sendByte(0);                 // Do limited crafting
+  sendVarInt(0);               // Dimension Type
+  sendString("overworld", -1); // Dimension Name
+  sendLong(0x482304890);       //{hashedSeed} random bytes
+  sendByte(GAMEMODE);          // gamemode
   currentPlayer->gamemode = GAMEMODE;
   sendByte(-1);  // previous gamemode
   sendByte(0);   // Is Debug
   sendByte(0);   // Is Flat
   sendByte(0);   // Has death location
   sendVarInt(0); // Portal cooldown
+  sendByte(0);   // Enforces Secure Chat
   sendDone();
 }
 void PlayS2Ctablist(player_t *currentPlayer, TabListAction action, uint16_t eid)
@@ -407,12 +410,12 @@ void PlayS2Csignedchatmessage(player_t *currentPlayer, char *message, size_t len
   sendVarInt(0); // Signature Length
   sendDone();
 }
-void PlayS2Cunsignedchatmessage(char *message, size_t len)
+void PlayS2Csysmessage(char *message, size_t len)
 {
   static const unsigned char NBT_text[9] = {
       0x0A, 0x08, 0x00, 0x04, 0x74, 0x65, 0x78, 0x74, 0x00};
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_CHAT_MESSAGE);
+  sendPlayPacketHeader(S2C_PLAY_SYSTEM_CHAT_MESSAGE);
   sendBuffer((char *)NBT_text, 9);
   sendString(message, len);
   sendByte(0);
@@ -514,13 +517,123 @@ void PlayS2Ccompassposition(player_t *currentPlayer, int32_t x, int32_t y, int32
   sendFloat(0);
   sendDone();
 }
+void ConfigurationS2Cfeatures()
+{
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_FEATURES);
+  sendVarInt(1);
+  sendString("vanilla", -1);
+  sendDone();
+}
+void ConfigurationS2Cknownpacks()
+{
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_KNOWN_PACKS);
+  sendVarInt(1);
+  sendString("minecraft", -1);
+  sendString("core", -1);
+  sendString(VERSION, -1);
+  sendDone();
+}
+
 void ConfigurationS2Cregistry()
 {
-  extern const uint8_t __codec_nbt[];
-  extern const size_t __codec_nbt_len;
   sendStart();
   sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
-  sendBuffer((char *)__codec_nbt, __codec_nbt_len);
+  sendString("dimension_type", -1);
+  sendVarInt(1);
+  sendString("overworld", -1);
+  sendByte(0);
+  sendDone();
+
+  static const char *biomes[] = {
+      "plains",
+      "snowy_taiga",
+  };
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendString("worldgen/biome", -1);
+  sendVarInt(sizeof(biomes) / sizeof(char *));
+  for (size_t i = 0; i < (size_t)(sizeof(biomes) / sizeof(char *)); i++)
+  {
+    sendString(biomes[i], -1);
+    sendByte(0);
+  }
+  sendDone();
+
+  static const char *damage_types[] = {
+      "arrow",
+      "bad_respawn_point",
+      "cactus",
+      "campfire",
+      "cramming",
+      "dragon_breath",
+      "drown",
+      "dry_out",
+      "explosion",
+      "fall",
+      "falling_anvil",
+      "falling_block",
+      "falling_stalactite",
+      "fireball",
+      "fireworks",
+      "fly_into_wall",
+      "freeze",
+      "generic",
+      "generic_kill",
+      "hot_floor",
+      "in_fire",
+      "in_wall",
+      "indirect_magic",
+      "lava",
+      "lightning_bolt",
+      "magic",
+      "mob_attack",
+      "mob_attack_no_aggro",
+      "mob_projectile",
+      "on_fire",
+      "out_of_world",
+      "outside_border",
+      "player_attack",
+      "player_explosion",
+      "sonic_boom",
+      "spit",
+      "stalagmite",
+      "starve",
+      "sting",
+      "sweet_berry_bush",
+      "thorns",
+      "thrown",
+      "trident",
+      "unattributed_fireball",
+      "wind_charge",
+      "wither",
+      "wither_skull"};
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendString("damage_type", -1);
+  sendVarInt(sizeof(damage_types) / sizeof(char *));
+  for (size_t i = 0; i < (size_t)(sizeof(damage_types) / sizeof(char *)); i++)
+  {
+    sendString(damage_types[i], -1);
+    sendByte(0);
+  }
+  sendDone();
+
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendString("wolf_variant", -1);
+  sendVarInt(1);
+  sendString("ashen", -1);
+  sendByte(0);
+  sendDone();
+
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendString("painting_variant", -1);
+  sendVarInt(1);
+  sendString("alban", -1);
+  sendByte(0);
   sendDone();
 }
 void ConfigurationS2Cready()

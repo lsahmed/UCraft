@@ -16,21 +16,21 @@
 // Misc functions
 static inline void U_wrapperStart()
 {
-return;
+    return;
 }
 static inline void U_wrapperEnd()
 {
-return;
+    return;
 }
-static inline void U_usleep(useconds_t usec)
+static inline void U_sleep(int msec)
 {
-    usleep(usec);
+    usleep(msec * 1000);
 }
-static inline uint64_t micros()
+static inline uint64_t U_millis()
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    return tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
+    return tv.tv_sec * (uint64_t)1000 + (tv.tv_usec) / 1000;
 }
 // Networking functions
 static inline int U_socket(int domain, int type, int protocol)

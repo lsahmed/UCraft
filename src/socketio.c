@@ -206,24 +206,7 @@ size_t sendGetGlobalBufferSpaceRemaining() { return sendPacketVars.globalbuffers
 size_t sendGetGlobalBufferIndex() { return sendPacketVars.globalbufferindex; }
 void sendclearGlobalBuffer()
 {
-
   sendPacketVars.globalbufferindex = 0;
-}
-size_t sendGlobalBuffer(player_t *player)
-{
-  size_t start_index = player->global_buffer_start_index;
-  size_t space_left = sendGetGlobalBufferIndex();
-  // copy the packet from the global buffer to the local buffer
-  while (start_index != sendPacketVars.globalbufferindex && space_left)
-  {
-    if (start_index > sendPacketVars.globalbuffersize)
-    {
-      printl(LOG_ERROR, "global buffer copy overflow! %ld\n", start_index);
-      return 0;
-    }
-    sendMainByte(sendPacketVars.globalbuffer[(start_index++)]);
-    space_left--;
-  }
   // player->global_buffer_start_index = start_index;
   //  free uneeded space if its more than MEM_CHUNK_THRESHOLD chunk sizes
   if (sendPacketVars.globalbuffer != NULL)
@@ -232,23 +215,34 @@ size_t sendGlobalBuffer(player_t *player)
     {
       uint8_t *buffer = NULL;
 
-      // printl(LOG_INFO,"extra memory can be freed %ld new: %ld\n", (sendPacketVars.globalbuffersize - sendPacketVars.globalbufferindex), sendPacketVars.globalbufferindex);
+      // printl(LOG_INFO, "extra memory can be freed %ld new: %ld\n", (sendPacketVars.globalbuffersize - sendPacketVars.globalbufferindex), sendPacketVars.globalbufferindex);
       buffer = U_realloc(sendPacketVars.globalbuffer, sendPacketVars.globalbufferindex + 1);
       if (buffer == NULL)
       {
         printl(LOG_ERROR, "Memory de/allocation failed!\n");
         sendPacketVars.player->remove_player = 1;
-        return 1;
+        return;
       }
       sendPacketVars.globalbuffer = buffer;
       sendPacketVars.globalbuffersize = sendPacketVars.globalbufferindex + 1;
     }
   }
-  if (!space_left)
+}
+void sendGlobalBuffer(player_t *player)
+{
+  // send bytes from 0 to start which is not part of this player
+  if (player->global_buffer_start_index > 0)
   {
-    return 1;
+    for (size_t i = 0; i < player->global_buffer_start_index; i++)
+    {
+      sendMainByte(sendPacketVars.globalbuffer[i]);
+    }
   }
-  return 0;
+  // send bytes from the end till the global buffer end
+  for (size_t i = player->global_buffer_end_index; i < sendGetGlobalBufferIndex(); i++)
+  {
+    sendMainByte(sendPacketVars.globalbuffer[i]);
+  }
 }
 size_t sendData(uint8_t *data, size_t buffersize)
 {
@@ -307,6 +301,23 @@ void sendStartPlayer(player_t *player)
     }
   }
   sendPacketVars.bufferindex = 0;
+
+  // free uneeded space if its more than MEM_CHUNK_THRESHOLD chunk sizes
+  if ((ssize_t)((sendPacketVars.buffersize - sendPacketVars.bufferindex) / MEM_CHUNK_SIZE) >= MEM_CHUNK_THRESHOLD)
+  {
+    uint8_t *buffer = NULL;
+
+    // printl(LOG_INFO,"extra memory can be freed %ld new: %ld\n", (sendPacketVars.buffersize - sendPacketVars.bufferindex) / MEM_CHUNK_SIZE, sendPacketVars.bufferindex);
+    buffer = U_realloc(sendPacketVars.buffer, sendPacketVars.bufferindex + 1);
+    if (buffer == NULL)
+    {
+      printl(LOG_ERROR, "Memory de/allocation failed buffer!\n");
+      sendPacketVars.player->remove_player = 1;
+      return;
+    }
+    sendPacketVars.buffer = buffer;
+    sendPacketVars.buffersize = sendPacketVars.bufferindex + 1;
+  }
 }
 void sendMainByte(uint8_t byte)
 {
@@ -348,22 +359,6 @@ void sendDispatch()
     }
 #endif /*ONLINE_MODE*/
     sendData(sendPacketVars.buffer, sendPacketVars.bufferindex);
-  }
-  // free uneeded space if its more than MEM_CHUNK_THRESHOLD chunk sizes
-  if ((ssize_t)((sendPacketVars.buffersize - sendPacketVars.bufferindex) / MEM_CHUNK_SIZE) >= MEM_CHUNK_THRESHOLD)
-  {
-    uint8_t *buffer = NULL;
-
-    // printl(LOG_INFO,"extra memory can be freed %ld new: %ld\n", (sendPacketVars.buffersize - sendPacketVars.bufferindex) / MEM_CHUNK_SIZE, sendPacketVars.bufferindex);
-    buffer = U_realloc(sendPacketVars.buffer, sendPacketVars.bufferindex + 1);
-    if (buffer == NULL)
-    {
-      printl(LOG_ERROR, "Memory de/allocation failed buffer!\n");
-      sendPacketVars.player->remove_player = 1;
-      return;
-    }
-    sendPacketVars.buffer = buffer;
-    sendPacketVars.buffersize = sendPacketVars.bufferindex + 1;
   }
 }
 uint8_t sendAllowed() { return 1; }

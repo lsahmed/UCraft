@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "game.h"
 typedef struct gamePlayerData_t gamePlayerData_t;
 typedef struct player_t player_t;
@@ -51,13 +50,14 @@ struct player_t
   uint8_t chunk_next_event : 1;
   uint8_t chunk_loaded_event : 1;
   uint8_t ingame : 1;
-  uint8_t ready_to_play:1;
+  uint8_t ready_to_play : 1;
   uint8_t logged_on : 1;
   uint8_t active : 1;
   uint8_t onground : 1;
   uint8_t heartbeat : 1;
   uint8_t remove_player : 1;
-  uint8_t configuration_event:1;
+  uint8_t configuration_event : 1;
+  uint8_t configuration_known_packs_ack_event : 1;
   uint8_t send_chat_login_event : 1;
   uint8_t settings_changed_event : 1;
   // Player Movement & action
@@ -92,6 +92,7 @@ struct player_t
   // Misc
   uint8_t ability;
   size_t global_buffer_start_index;
+  size_t global_buffer_end_index;
   size_t loaded_chunks;
   // Game
   gamePlayerData_t gamePlayerData;

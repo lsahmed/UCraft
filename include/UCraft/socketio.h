@@ -63,7 +63,7 @@ size_t sendRevertFromLocalBuffer();
 size_t sendGetGlobalBufferSpaceRemaining();
 size_t sendGetGlobalBufferIndex();
 void sendclearGlobalBuffer();
-size_t sendGlobalBuffer(player_t *player);
+void sendGlobalBuffer(player_t *player);
 
 // writing utils, one player context only.
 size_t sendData(uint8_t *data, size_t packetsize);
