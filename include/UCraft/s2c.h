@@ -31,9 +31,9 @@
 #define S2C_PLAY_CHAT_SUGGESTIONS 24
 #define S2C_PLAY_CHANNEL 25
 #define S2C_PLAY_ENTITY_DAMAGE 26
-#define S2C_PLAY_HIDE_MESSAGE 27
-#define S2C_PLAY_KICK 28
-#define S2C_PLAY_DEBUG_SAMPLE 29
+#define S2C_PLAY_DEBUG_SAMPLE 27
+#define S2C_PLAY_HIDE_MESSAGE 28
+#define S2C_PLAY_DISCONNECT 29
 #define S2C_PLAY_UNSIGNED_CHAT_MESSAGE 30
 #define S2C_PLAY_ENTITY_EVENT 31
 #define S2C_PLAY_EXPLOSION 32
@@ -119,17 +119,18 @@
 #define S2C_PLAY_TELEPORT 112
 #define S2C_PLAY_TICK_RATE 113
 #define S2C_PLAY_TICK_STEP 114
-#define S2C_PLAY_ADVANCEMENTS 115
-#define S2C_PLAY_ENTITY_ATTRIBUTES 116
-#define S2C_PLAY_ENTITY_EFFECT 117
-#define S2C_PLAY_RECIPES 118
-#define S2C_PLAY_TAGS 119
+#define S2C_PLAY_TRANSFER 115
+#define S2C_PLAY_ADVANCEMENTS 116
+#define S2C_PLAY_ENTITY_ATTRIBUTES 117
+#define S2C_PLAY_ENTITY_EFFECT 118
+#define S2C_PLAY_RECIPES 119
+#define S2C_PLAY_TAGS 120
 
-#define S2C_PLAY_MAPPING_LEN 120
+#define S2C_PLAY_MAPPING_LEN 121
 
 #define S2C_CONFIGURATION_COOKIE_REQUEST 0
 #define S2C_CONFIGURATION_CHANNEL 1
-#define S2C_CONFIGURATION_KICK 2
+#define S2C_CONFIGURATION_DISCONNECT 2
 #define S2C_CONFIGURATION_READY 3
 #define S2C_CONFIGURATION_HEARTBEAT 4
 #define S2C_CONFIGURATION_PING 5
@@ -147,6 +148,7 @@
 
 void StatusS2Cresponse(player_t *currentPlayer);
 void StatusS2Cpong(player_t *currentPlayer);
+void LoginS2Cdisconnect(player_t *currentPlayer, char *reason);
 void LoginS2Cencryptionrequest(player_t *currentPlayer);
 void LoginS2Ccompression(player_t *currentPlayer);
 void LoginS2Csuccess(player_t *currentPlayer);
@@ -181,8 +183,11 @@ void PlayS2Cbossbar(player_t *currentPlayer, uint16_t uuid, int32_t action,
                     char *title, size_t len, float health);
 void PlayS2Centitydata(player_t *currentPlayer, uint8_t entity, EntityDataMetadata type, State state);
 void PlayS2Ccompassposition(player_t *currentPlayer, int32_t x, int32_t y, int32_t z);
+void PlayS2Cdisconnect(player_t *currentPlayer, char *reason);
 void ConfigurationS2Cfeatures();
 void ConfigurationS2Cknownpacks();
 void ConfigurationS2Cregistry();
 void ConfigurationS2Cready();
+void ConfigurationS2Cdisconnect(player_t *currentPlayer, char *reason);
+
 #endif

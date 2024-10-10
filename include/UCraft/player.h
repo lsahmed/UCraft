@@ -14,11 +14,10 @@ typedef struct player_t player_t;
 struct player_t
 {
   // General
-  char playername[17];
-  int32_t player_id; // negative player id is possible
-  int player_fd;
-  // Protocol
-  int32_t handshake_status;
+  char name[18];
+  char disconnect_reason[64];
+  int fd;
+  int32_t id; // negative player id is possible
 #ifdef ONLINE_MODE
   char verify_token[4];
   uint8_t iv_encrypt[16];
@@ -40,22 +39,26 @@ struct player_t
   uint8_t encryption_recv_event : 1;
   uint8_t encryption_verified : 1;
 #endif /*ONLINE_MODE*/
+  // Protocol
+  uint8_t handshake_status : 3;
   uint8_t gamemode : 2;
   uint8_t teleport : 1;
-  uint8_t playerlist_event : 1;
-  uint8_t ping_event : 1;
-  uint8_t compression_event : 1;
-  uint8_t login_event : 1;
-  uint8_t spawn_event : 1;
-  uint8_t chunk_next_event : 1;
-  uint8_t chunk_loaded_event : 1;
   uint8_t ingame : 1;
   uint8_t ready_to_play : 1;
   uint8_t logged_on : 1;
   uint8_t active : 1;
   uint8_t onground : 1;
   uint8_t heartbeat : 1;
-  uint8_t remove_player : 1;
+  // Events
+  uint8_t chat_event : 1;
+  uint8_t ping_event : 1;
+  uint8_t login_event : 1;
+  uint8_t spawn_event : 1;
+  uint8_t chunk_loaded_event : 1;
+  uint8_t playerlist_event : 1;
+  uint8_t compression_event : 1;
+  uint8_t chunk_next_event : 1;
+  uint8_t remove_player_event : 1;
   uint8_t configuration_event : 1;
   uint8_t configuration_known_packs_ack_event : 1;
   uint8_t send_chat_login_event : 1;
@@ -66,15 +69,11 @@ struct player_t
   uint8_t swing_arm_event : 1;
   uint8_t entity_action_event : 1;
   // Packet
-  uint8_t packet_dispatch_flag : 1;
-  size_t packet_len;
-  size_t packet_sent;
-  size_t packet_timeout;
+  uint8_t packet_dispatch_event : 1;
+  size_t packet_len, packet_sent, packet_timeout;
   uint8_t *packet;
   // Chunk
   int32_t chunk_x, chunk_z, chunk_px, chunk_pz;
-  // Chat
-  uint8_t chat_event : 1;
   // Player skin
   uint8_t skin_parts;
   // Movement

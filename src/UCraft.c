@@ -25,7 +25,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
     player_t *currentPlayer = readPacketValue->player;
     while (readAllowed())
     {
-        if (currentPlayer->remove_player)
+        if (currentPlayer->remove_player_event)
         {
             return;
         }
@@ -34,7 +34,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
         if (readPacketValue->pktbytes > readPacketValue->buffersize || readPacketValue->pktbytes > READBUFSIZE)
         {
             printl(LOG_WARN, "c2sHandler overflow! %ld/%ld\n", readPacketValue->pktbytes, readPacketValue->buffersize);
-            currentPlayer->remove_player = 1;
+            currentPlayer->remove_player_event = 1;
             return;
         }
         if (currentPlayer->compression_event)
@@ -65,7 +65,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
                 if (protocol_version != PROTOCOL_VERSION && protocol_version != -1)
                 {
                     printl(LOG_WARN, "client not supported! version:%d\n", protocol_version);
-                    currentPlayer->remove_player = 1;
+                    currentPlayer->remove_player_event = 1;
                 }
                 uint8_t buf[255];
                 readString((char *)buf, 255);
@@ -94,25 +94,28 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
             case 0:
                 if (playerGetActiveCount() >= MAX_PLAYERS)
                 {
-                    currentPlayer->remove_player = 1;
+                    strncpy((char *)currentPlayer->disconnect_reason, "Server full!", sizeof(((player_t *)0)->disconnect_reason));
+                    currentPlayer->remove_player_event = 1;
                     continue;
                 }
-                readString((char *)currentPlayer->playername, sizeof(((player_t *)0)->playername));
+                readString((char *)currentPlayer->name, sizeof(((player_t *)0)->name));
                 // check the player name
                 if (playerCheckName(currentPlayer))
                 {
-                    strncpy((char *)currentPlayer->playername, "stinky_player", sizeof(((player_t *)0)->playername));
-                    currentPlayer->remove_player = 1;
+                    strncpy((char *)currentPlayer->name, "stinky_player", sizeof(((player_t *)0)->name));
+                    strncpy((char *)currentPlayer->disconnect_reason, "Invalid player name!", sizeof(((player_t *)0)->disconnect_reason));
+                    currentPlayer->remove_player_event = 1;
                     continue;
                 }
                 // check if any other players exist with the same name
                 if (playerCheckDuplicate(currentPlayer))
                 {
-                    strncpy((char *)currentPlayer->playername, "stinky_player", sizeof(((player_t *)0)->playername));
-                    currentPlayer->remove_player = 1;
+                    strncpy((char *)currentPlayer->name, "stinky_player", sizeof(((player_t *)0)->name));
+                    strncpy((char *)currentPlayer->disconnect_reason, "Player is already in game!", sizeof(((player_t *)0)->disconnect_reason));
+                    currentPlayer->remove_player_event = 1;
                     continue;
                 }
-                printl(LOG_INFO, "Player login name: %s\n", currentPlayer->playername);
+                printl(LOG_INFO, "Player login name: %s\n", currentPlayer->name);
 #ifdef ONLINE_MODE
                 currentPlayer->encryption_event = 1;
 #else
@@ -175,8 +178,8 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
             break;
         default:
             // invalid state
-            printl(LOG_WARN, "Player(%d) invalid state! %d\n", currentPlayer->player_id, currentPlayer->handshake_status);
-            currentPlayer->remove_player = 1;
+            printl(LOG_WARN, "Player(%d) invalid state! %d\n", currentPlayer->id, currentPlayer->handshake_status);
+            currentPlayer->remove_player_event = 1;
             break;
         }
         // empty the packet buffer
@@ -205,7 +208,7 @@ static void s2cHandler()
         if (currentPlayer->ping_event)
         {
             StatusS2Cpong(currentPlayer);
-            currentPlayer->remove_player = 1;
+            currentPlayer->remove_player_event = 1;
             currentPlayer->ping_event = 0;
         }
         if (currentPlayer->playerlist_event)
@@ -235,14 +238,14 @@ static void s2cHandler()
         {
             PlayS2Clogin(currentPlayer);
             PlayS2Cheartbeat(currentPlayer);
-            PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED | TABLIST_ACTION_LATENCY, currentPlayer->player_id);
+            PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED | TABLIST_ACTION_LATENCY, currentPlayer->id);
             PlayS2Centitydata(currentPlayer, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, currentPlayer->skin_parts); // enable from cape to hat
             // show player to other clients
             for (player_t *p = playerGetHead(); p != NULL; p = p->next)
             {
                 if (p != currentPlayer && p->active)
                 {
-                    PlayS2Ctablist(p, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, p->player_id);
+                    PlayS2Ctablist(p, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, p->id);
                     PlayS2Cspawnentity(p, ENTITY_METADATA_TYPE_PLAYER);
                     PlayS2Centitydata(p, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, p->skin_parts); // enable from cape to hat
                 }
@@ -316,11 +319,10 @@ static void s2cHandler()
             sendRevertFromGlobalBuffer();
             if ((main_tick % 500) == 0)
             {
-                if (!currentPlayer->heartbeat)
+                if (currentPlayer->heartbeat == 0)
                 {
-                    PlayS2Ckick(currentPlayer, "{\"text\":\"Failed heartbeat! {try not doing that}\"}");
-                    printl(LOG_INFO, "Failed heartbeat for %s\n", currentPlayer->playername);
-                    currentPlayer->remove_player = 1;
+                    strncpy((char *)currentPlayer->disconnect_reason, "Timed out", sizeof(((player_t *)0)->disconnect_reason));
+                    currentPlayer->remove_player_event = 1;
                 }
                 PlayS2Cheartbeat(currentPlayer);
                 currentPlayer->heartbeat = 0;
@@ -360,11 +362,34 @@ static void s2cHandler()
             gamePlayerLocalTick(currentPlayer);
             sendGlobalBuffer(currentPlayer);
         }
-        if (currentPlayer->packet_dispatch_flag)
+        // disconnect message case {SHOULD BE THE LAST ONE BEFORE DISPATCHING THE PACKET}
+        if (currentPlayer->remove_player_event)
+        {
+            if (strnlen(currentPlayer->disconnect_reason, sizeof(((player_t *)0)->disconnect_reason)))
+            {
+                switch (currentPlayer->handshake_status)
+                {
+                case 1: // status state
+                    break;
+                case 2: // login state
+                    LoginS2Cdisconnect(currentPlayer, currentPlayer->disconnect_reason);
+                    break;
+                case 3: // config state
+                    ConfigurationS2Cdisconnect(currentPlayer, currentPlayer->disconnect_reason);
+                    break;
+                case 4: // play state
+                    PlayS2Cdisconnect(currentPlayer, currentPlayer->disconnect_reason);
+                    break;
+                default:
+                    printl(LOG_WARN, "player %s is in an invalid handshake status upon disconnection!\n", currentPlayer->name);
+                }
+            }
+        }
+        if (currentPlayer->packet_dispatch_event)
         {
             if (currentPlayer->packet_timeout > SEND_PACKET_TIMEOUT)
             {
-                currentPlayer->remove_player = 1;
+                currentPlayer->remove_player_event = 1;
             }
             else
             {
@@ -374,14 +399,14 @@ static void s2cHandler()
                     if (currentPlayer->packet == NULL)
                     {
                         printl(LOG_ERROR, "WTF, idk why this is null\n");
-                        currentPlayer->remove_player = 1;
+                        currentPlayer->remove_player_event = 1;
                         return;
                     }
                     U_free(currentPlayer->packet);
                     currentPlayer->packet_len = 0;
                     currentPlayer->packet_sent = 0;
                     currentPlayer->packet = NULL;
-                    currentPlayer->packet_dispatch_flag = 0;
+                    currentPlayer->packet_dispatch_event = 0;
                 }
                 else
                 {
@@ -397,6 +422,7 @@ static void s2cHandler()
             sendDispatch();
         }
         currentPlayer->global_buffer_start_index = 0;
+        currentPlayer->global_buffer_end_index = 0;
     }
     sendclearGlobalBuffer();
 
@@ -411,7 +437,7 @@ static void s2cHandler()
             // add current player to the the tablist as well
             if (currentPlayer->logged_on)
             {
-                PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, currentPlayer->player_id);
+                PlayS2Ctablist(currentPlayer, TABLIST_ACTION_ADDPLAYER | TABLIST_ACTION_LISTED, currentPlayer->id);
                 PlayS2Cspawnentity(currentPlayer, ENTITY_METADATA_TYPE_PLAYER);
                 PlayS2Centitydata(currentPlayer, PLAYER_SKIN_PARTS_FLAGS, ENTITY_DATA_BYTE, currentPlayer->skin_parts); // enable from cape to hat
                 currentPlayer->send_chat_login_event = 1;
@@ -502,7 +528,7 @@ static void s2cHandler()
             if (currentPlayer->send_chat_login_event)
             {
                 char join_msg[64];
-                snprintf(join_msg, sizeof(join_msg), "§e%s has joined the game", currentPlayer->playername);
+                snprintf(join_msg, sizeof(join_msg), "§e%s has joined the game", currentPlayer->name);
                 PlayS2Csysmessage(join_msg, strnlen(join_msg, sizeof(join_msg)));
                 currentPlayer->send_chat_login_event = 0;
             }
@@ -582,7 +608,13 @@ int UCraftStart(uint8_t *cleanup_flag)
     }
     if (U_setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
     {
-        printl(LOG_ERROR, "setsockopt error\n");
+        printl(LOG_ERROR, "setsockopt SOL_SOCKET error fd:%d\n", server_fd);
+        UCraftCleanup();
+        return 1;
+    }
+    if (U_setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)))
+    {
+        printl(LOG_ERROR, "setsockopt IPPROTO_TCP error fd:%d\n", server_fd);
         UCraftCleanup();
         return 1;
     }
@@ -591,13 +623,13 @@ int UCraftStart(uint8_t *cleanup_flag)
     address.sin_port = htons(PORT);
     if (U_bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
     {
-        printl(LOG_ERROR, "bind error");
+        printl(LOG_ERROR, "bind error fd:%d\n", server_fd);
         UCraftCleanup();
         return 1;
     }
     if (U_listen(server_fd, MAX_PLAYERS + 1) < 0)
     {
-        printl(LOG_ERROR, "listen error");
+        printl(LOG_ERROR, "listen error fd:%d\n", server_fd);
         UCraftCleanup();
         return 1;
     }
@@ -621,7 +653,7 @@ int UCraftStart(uint8_t *cleanup_flag)
         rv = U_select(max_sock + 1, &set, NULL, NULL, &timeout);
         if (rv == -1)
         {
-            printl(LOG_ERROR, "select error");
+            printl(LOG_ERROR, "select error fd:%d\n", server_fd);
             break;
         }
         else
@@ -632,8 +664,14 @@ int UCraftStart(uint8_t *cleanup_flag)
                 // set the socket non blocking
                 if (U_setsocknonblock(new_socket) < 0)
                 {
-                    printl(LOG_ERROR, "setsocknonblock error\n");
+                    printl(LOG_ERROR, "setsocknonblock error fd:%d\n", new_socket);
                     break;
+                }
+                if (U_setsockopt(new_socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)))
+                {
+                    printl(LOG_ERROR, "setsockopt IPPROTO_TCP error fd:%d\n", new_socket);
+                    UCraftCleanup();
+                    return 1;
                 }
                 if (new_socket > max_sock)
                 {
@@ -654,7 +692,7 @@ int UCraftStart(uint8_t *cleanup_flag)
             }
             for (player_t *player = playerGetHead(); player != NULL;)
             {
-                if (player->remove_player)
+                if (player->remove_player_event)
                 {
                     // printl(LOG_INFO, "removing player due to flag\n");
                     playerRemove(player);
@@ -665,12 +703,12 @@ int UCraftStart(uint8_t *cleanup_flag)
                     }
                     continue;
                 }
-                if (FD_ISSET(player->player_fd, &set))
+                if (FD_ISSET(player->fd, &set))
                 {
                     readPacketVars_t *readPacketValue = readValues();
                     readPacketValue->bufferpos = 0;
-                    ssize_t read_size = U_recv(player->player_fd, readPacketValue->buffer, READBUFSIZE, 0);
-                    if (read_size <= 0 || player->player_fd < 0)
+                    ssize_t read_size = U_recv(player->fd, readPacketValue->buffer, READBUFSIZE, 0);
+                    if (read_size <= 0 || player->fd < 0)
                     {
                         // printl(LOG_WARN,"Connection closed %d fd:%d\n", player->handshake_status,
                         //  player->player_fd);
@@ -693,7 +731,7 @@ int UCraftStart(uint8_t *cleanup_flag)
                         if (ret != 0)
                         {
                             printl(LOG_ERROR, "aes decrypt failed %d\n", ret);
-                            player->remove_player = 1;
+                            player->remove_player_event = 1;
                             continue;
                         }
                     }

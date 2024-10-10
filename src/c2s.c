@@ -19,8 +19,8 @@ static void PlayC2S_signed_chat_message(player_t *currentPlayer)
       memset(chat_buffer, 0, sizeof(chat_buffer));
       // add the decorators, very ugly but trying to avoid using snprintf here
       chat_buffer[0] = '<';
-      char *name = strncpy(&chat_buffer[1], currentPlayer->playername, sizeof(((player_t *)0)->playername));
-      char *footer = &name[strnlen(name, sizeof(((player_t *)0)->playername))];
+      char *name = strncpy(&chat_buffer[1], currentPlayer->name, sizeof(((player_t *)0)->name));
+      char *footer = &name[strnlen(name, sizeof(((player_t *)0)->name))];
       *footer++ = '>';
       *footer++ = ' ';
       for (int i = 0; i < length; i++)
@@ -129,7 +129,7 @@ static void PlayC2S_player_action(player_t *currentPlayer) {}
 static void PlayC2S_entity_action(player_t *currentPlayer)
 {
   int32_t eid = readVarInt();
-  if (eid == currentPlayer->player_id)
+  if (eid == currentPlayer->id)
   {
     currentPlayer->entity_action_id = readVarInt();
     readVarInt();
@@ -163,7 +163,19 @@ static void PlayC2S_entity_spectate(player_t *currentPlayer) {}
 static void PlayC2S_block_interact(player_t *currentPlayer) {}
 static void PlayC2S_use_item(player_t *currentPlayer) {}
 
-static void ConfigurationC2S_settings(player_t *currentPlayer) {}
+static void ConfigurationC2S_settings(player_t *currentPlayer)
+{
+  char buf[17];
+  readString(buf, sizeof(buf));           // Locale
+  readByte();                             // View Distance
+  readVarInt();                           // Chat Mode
+  readByte();                             // Chat Colors
+  currentPlayer->skin_parts = readByte(); // Displayed Skin Parts
+  readVarInt();                           // Main Hand
+  readByte();                             // Disable Text Filter
+  readByte();                             // Allow server listing
+  currentPlayer->settings_changed_event = 1;
+}
 static void ConfigurationC2S_cookie_response(player_t *currentPlayer) {}
 static void ConfigurationC2S_channel(player_t *currentPlayer) {}
 static void ConfigurationC2S_ready(player_t *currentPlayer)

@@ -110,7 +110,7 @@ void httpsGetPlayerInfo(player_t *currentPlayer)
     if (ret < 0)
     {
         printl(LOG_ERROR, "mbedtls_pk_write_pubkey_der returned %d\n", ret);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     mbedtls_sha1_update(&sha1, &publickey[sizeof(publickey) - ret], ret);
@@ -122,11 +122,11 @@ void httpsGetPlayerInfo(player_t *currentPlayer)
     {
         printl(LOG_ERROR, "httpsConnect returned %d\n", ret);
         httpsFreePlayer(currentPlayer);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     // form the request
-    httpsGetData()->len = snprintf(httpsGetData()->buffer, sizeof(((httpsData_t *)0)->buffer), "GET /session/minecraft/hasJoined?username=%s&serverId=%s HTTP/1.1\r\nHost: %s\r\nAccept: application/json\r\nContent-Type: application/json\r\n\r\n", currentPlayer->playername, server_hash, AUTH_HOST);
+    httpsGetData()->len = snprintf(httpsGetData()->buffer, sizeof(((httpsData_t *)0)->buffer), "GET /session/minecraft/hasJoined?username=%s&serverId=%s HTTP/1.1\r\nHost: %s\r\nAccept: application/json\r\nContent-Type: application/json\r\n\r\n", currentPlayer->name, server_hash, AUTH_HOST);
     // set the rts flag and dispatch it whenever it can be sent
     currentPlayer->https_rts_event = 1;
 }
@@ -145,7 +145,7 @@ int httpsRtr(player_t *currentPlayer)
     if (httpsData.timeout > AUTH_TIMEOUT)
     {
         printl(LOG_ERROR, "httpsRtr timeout\n");
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     int ret = mbedtls_ssl_read(&httpsData.ssl, (unsigned char *)&httpsData.buffer[httpsData.offset], sizeof(((httpsData_t *)0)->buffer) - httpsData.offset);
@@ -160,7 +160,7 @@ int httpsRtr(player_t *currentPlayer)
             break;
         default:
             printl(LOG_WARN, "mbedtls_ssl_read returned %d\n", ret);
-            currentPlayer->remove_player = 1;
+            currentPlayer->remove_player_event = 1;
             return 0;
             break;
         }
@@ -178,7 +178,8 @@ int httpsRtr(player_t *currentPlayer)
     if (strstr(httpsData.buffer, "204 No Content\r\n"))
     {
         printl(LOG_INFO, "HTTP 204 received\n");
-        currentPlayer->remove_player = 1;
+        strncpy((char *)currentPlayer->disconnect_reason, "Invalid session (Try restarting your game)", sizeof(((player_t *)0)->disconnect_reason));
+        currentPlayer->remove_player_event = 1;
     }
     // apparently its okay for the case to be different WHY
     char *content_length_header = strstr(httpsData.buffer, "Content-Length:");
@@ -195,7 +196,7 @@ int httpsRtr(player_t *currentPlayer)
     if (content_length >= sizeof(((httpsData_t *)0)->buffer))
     {
         printl(LOG_WARN, "https_rtr_event content length too big\n");
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     // check if all the data has been received
@@ -210,7 +211,7 @@ int httpsRtr(player_t *currentPlayer)
     if (httpsData.offset + httpsData.len + 1 >= sizeof(((httpsData_t *)0)->buffer))
     {
         printl(LOG_WARN, "https_rtr_event buffer overflow\n");
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     httpsData.buffer[httpsData.offset + httpsData.len + 1] = '\0';
@@ -223,7 +224,7 @@ int httpsRtr(player_t *currentPlayer)
     {
         printl(LOG_WARN, "lwjson_parse returned %d\n", ret);
         lwjson_free(&lwjson);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     // parse the json
@@ -231,37 +232,37 @@ int httpsRtr(player_t *currentPlayer)
     if ((t = lwjson_find(&lwjson, "name")) == NULL)
     {
         lwjson_free(&lwjson);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     if (t->type == LWJSON_TYPE_STRING)
     {
-        if (t->u.str.token_value_len < sizeof(((player_t *)0)->playername))
+        if (t->u.str.token_value_len < sizeof(((player_t *)0)->name))
         {
-            memset(currentPlayer->playername, 0, sizeof(((player_t *)0)->playername));
-            memcpy(currentPlayer->playername, t->u.str.token_value, t->u.str.token_value_len);
+            memset(currentPlayer->name, 0, sizeof(((player_t *)0)->name));
+            memcpy(currentPlayer->name, t->u.str.token_value, t->u.str.token_value_len);
         }
     }
     // sanity check for the player name
     if (playerCheckName(currentPlayer))
     {
-        strncpy((char *)currentPlayer->playername, "stinky_player", sizeof(((player_t *)0)->playername));
+        strncpy((char *)currentPlayer->name, "stinky_player", sizeof(((player_t *)0)->name));
         lwjson_free(&lwjson);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     // another name sanity check
     if (playerCheckDuplicate(currentPlayer))
     {
-        strncpy((char *)currentPlayer->playername, "stinky_player", sizeof(((player_t *)0)->playername));
+        strncpy((char *)currentPlayer->name, "stinky_player", sizeof(((player_t *)0)->name));
         lwjson_free(&lwjson);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     if ((t = lwjson_find(&lwjson, "properties")) == NULL)
     {
         lwjson_free(&lwjson);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     const lwjson_token_t *tkn = lwjson_get_first_child(t);
@@ -292,7 +293,7 @@ int httpsRtr(player_t *currentPlayer)
                                 {
                                     printl(LOG_ERROR, "U_calloc returned NULL\n");
                                     lwjson_free(&lwjson);
-                                    currentPlayer->remove_player = 1;
+                                    currentPlayer->remove_player_event = 1;
                                     return 0;
                                 }
                                 memcpy(currentPlayer->texture_value, obj->u.str.token_value, obj->u.str.token_value_len);
@@ -308,7 +309,7 @@ int httpsRtr(player_t *currentPlayer)
                                 {
                                     printl(LOG_ERROR, "U_calloc returned NULL\n");
                                     lwjson_free(&lwjson);
-                                    currentPlayer->remove_player = 1;
+                                    currentPlayer->remove_player_event = 1;
                                     return 0;
                                 }
                                 memcpy(currentPlayer->texture_signature, obj->u.str.token_value, obj->u.str.token_value_len);
@@ -341,7 +342,7 @@ int httpsRts(player_t *currentPlayer)
     if (httpsData.timeout > AUTH_TIMEOUT)
     {
         printl(LOG_ERROR, "httpsRtr timeout\n");
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return 0;
     }
     int ret = 0;
@@ -368,7 +369,7 @@ int httpsRts(player_t *currentPlayer)
                     ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS)
                 {
                     printl(LOG_WARN, "mbedtls_ssl_handshake returned -0x%x\n", -ret);
-                    currentPlayer->remove_player = 1;
+                    currentPlayer->remove_player_event = 1;
                     return 0;
                 }
             }
@@ -377,7 +378,7 @@ int httpsRts(player_t *currentPlayer)
             break;
         default:
             printl(LOG_WARN, "mbedtls_ssl_write returned %d\n", ret);
-            currentPlayer->remove_player = 1;
+            currentPlayer->remove_player_event = 1;
             return 0;
             break;
         }
@@ -398,7 +399,7 @@ void httpsFreePlayer(player_t *currentPlayer)
     {
         return;
     }
-    //TODO: make this non blocking
+    // TODO: make this non blocking
     int ret = 0;
     for (int i = 0; i < 200; i++)
     {

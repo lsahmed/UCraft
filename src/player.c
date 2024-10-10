@@ -87,7 +87,7 @@ player_t *playerGetId(int32_t player_id)
   player_t *player = playerListHead;
   while (player != NULL)
   {
-    if (player->player_id == player_id)
+    if (player->id == player_id)
     {
       return player;
     }
@@ -102,31 +102,31 @@ player_t *playerAdd(uint32_t player_fd)
   {
     return NULL;
   }
-  player->player_fd = player_fd;
+  player->fd = player_fd;
   FD_SET(player_fd, &masterset);
-  player->player_id = player_fd + PLAYER_BASE;
+  player->id = player_fd + PLAYER_BASE;
   player->next = playerListHead;
   playerListHead = player;
   return player;
 }
 int playerCheckName(player_t *player)
 {
-  for (size_t i = 0; i < strnlen(player->playername, sizeof(((player_t *)0)->playername)); i++)
+  for (size_t i = 0; i < strnlen(player->name, sizeof(((player_t *)0)->name)); i++)
   {
-    if (player->playername[i] <= '/')
+    if (player->name[i] <= '/')
     {
       return 1;
     }
-    if (player->playername[i] >= ':' && player->playername[i] <= '@')
+    if (player->name[i] >= ':' && player->name[i] <= '@')
     {
       return 1;
     }
     // remove '_' since its valid
-    if ((player->playername[i] >= '[' && player->playername[i] <= '`') && player->playername[i] != '_')
+    if ((player->name[i] >= '[' && player->name[i] <= '`') && player->name[i] != '_')
     {
       return 1;
     }
-    if (player->playername[i] >= '{')
+    if (player->name[i] >= '{')
     {
       return 1;
     }
@@ -138,7 +138,7 @@ int playerCheckDuplicate(player_t *player)
   player_t *current = playerListHead;
   while (current != NULL)
   {
-    if (current != player && strncmp(current->playername, player->playername, sizeof(((player_t *)0)->playername)) == 0)
+    if (current != player && strncmp(current->name, player->name, sizeof(((player_t *)0)->name)) == 0)
     {
       return 1;
     }
@@ -170,18 +170,18 @@ uint8_t playerRemove(player_t *player)
     U_free(player->texture_signature);
   }
 #endif /*ONLINE_MODE_AUTH*/
-  U_shutdown(player->player_fd, SHUT_RDWR);
-  U_close(player->player_fd);
+  U_shutdown(player->fd, SHUT_RDWR);
+  U_close(player->fd);
   if (player->packet)
   {
     U_free(player->packet);
   }
-  FD_CLR(player->player_fd, &masterset);
+  FD_CLR(player->fd, &masterset);
   if (player->active)
   {
-    playerPushDisconnected(player->player_id, player->playername, sizeof(((player_t *)0)->playername));
+    playerPushDisconnected(player->id, player->name, sizeof(((player_t *)0)->name));
     gamePlayerLeft(player);
-    printl(LOG_INFO, "player %s removed\n", player->playername);
+    printl(LOG_INFO, "player %s has been removed from the game\n", player->name);
   }
   if (playerListHead == player)
   {

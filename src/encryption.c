@@ -119,7 +119,7 @@ void LoginC2S_encryption_response()
     if (readVarInt() != 128)
     {
         printl(LOG_WARN, "shared secret length != 128\n");
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     readBuffer((char *)encrypted, sizeof(encrypted));
@@ -127,13 +127,13 @@ void LoginC2S_encryption_response()
     if (ret != 0)
     {
         printl(LOG_WARN, "mbedtls_rsa_rsaes_oaep_decrypt failed! %d\n", ret);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     if (decrypted_size != 16)
     {
         printl(LOG_WARN, "decrypted size != 16 %d\n", decrypted_size);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     memcpy(currentPlayer->iv_encrypt, decrypted, 16);
@@ -141,7 +141,7 @@ void LoginC2S_encryption_response()
     if (readVarInt() != 128)
     {
         printl(LOG_WARN, "shared verify token length != 128\n");
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     readBuffer((char *)encrypted, sizeof(encrypted));
@@ -149,19 +149,19 @@ void LoginC2S_encryption_response()
     if (ret != 0)
     {
         printl(LOG_WARN, "mbedtls_rsa_rsaes_oaep_decrypt failed! %d\n", ret);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     if (decrypted_size != 4)
     {
         printl(LOG_WARN, "decrypted size != 4\n");
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     if (memcmp(currentPlayer->verify_token, decrypted, decrypted_size) != 0)
     {
         printl(LOG_WARN, "verify token mismatch!\n");
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
 
@@ -175,7 +175,7 @@ void LoginC2S_encryption_response()
     if (ret != 0)
     {
         printl(LOG_ERROR, "mbedtls_aes_setkey_enc returned %d\n", ret);
-        currentPlayer->remove_player = 1;
+        currentPlayer->remove_player_event = 1;
         return;
     }
     currentPlayer->encryption_verified = 1;

@@ -44,10 +44,19 @@ void StatusS2Cpong(player_t *currentPlayer)
 
   sendStart();
   sendByte(0x01);
-  sendBuffer(currentPlayer->playername, 8);
+  sendBuffer(currentPlayer->name, 8);
   sendDone();
 }
 // Login packets
+void LoginS2Cdisconnect(player_t *currentPlayer, char *reason)
+{
+  char buffer[300];
+  sendStart();
+  sendByte(0x00);
+  size_t len = snprintf(buffer, sizeof(buffer), "{\"text\":\"%s\"}", reason);
+  sendString(buffer, len);
+  sendDone();
+}
 #ifdef ONLINE_MODE
 void LoginS2Cencryptionrequest(player_t *currentPlayer)
 {
@@ -94,9 +103,9 @@ void LoginS2Csuccess(player_t *currentPlayer)
 {
   sendStart();
   sendByte(0x02);
-  sendUUID(currentPlayer->player_id); // UUID
+  sendUUID(currentPlayer->id); // UUID
   // sendBuffer((char*)currentPlayer->uuid, 16);
-  sendString(currentPlayer->playername, -1); // Username
+  sendString(currentPlayer->name, -1); // Username
 #ifdef ONLINE_MODE_AUTH
   if (currentPlayer->texture_value && currentPlayer->texture_signature)
   {
@@ -122,7 +131,7 @@ void PlayS2Clogin(player_t *currentPlayer)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_INITIALIZE);
-  sendInt(currentPlayer->player_id);
+  sendInt(currentPlayer->id);
   sendByte(0);                 // Is hardcore
   sendVarInt(1);               // World Count
   sendString("overworld", -1); // Dimension Names
@@ -155,7 +164,7 @@ void PlayS2Ctablist(player_t *currentPlayer, TabListAction action, uint16_t eid)
   sendUUID(eid);
   if (action & TABLIST_ACTION_ADDPLAYER)
   {
-    sendString(currentPlayer->playername, -1);
+    sendString(currentPlayer->name, -1);
 #ifdef ONLINE_MODE_AUTH
     if (currentPlayer->texture_value && currentPlayer->texture_signature)
     {
@@ -221,8 +230,8 @@ void PlayS2Cspawnentity(player_t *currentPlayer, EntityMetadataType type)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_ENTITY_OBJECT_SPAWN);
-  sendVarInt(currentPlayer->player_id);
-  sendUUID(currentPlayer->player_id);
+  sendVarInt(currentPlayer->id);
+  sendUUID(currentPlayer->id);
   sendVarInt(type);
   sendDouble(currentPlayer->x);
   sendDouble(currentPlayer->y);
@@ -312,7 +321,7 @@ void PlayS2Crelativemove(player_t *currentPlayer, int16_t diffx, int16_t diffy, 
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_RELATIVE_MOVE);
-  sendVarInt(currentPlayer->player_id);
+  sendVarInt(currentPlayer->id);
   sendShort(diffx);
   sendShort(diffy);
   sendShort(diffz);
@@ -323,7 +332,7 @@ void PlayS2Cmovementrotation(player_t *currentPlayer, int16_t diffx, int16_t dif
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_MOVEMENT_ROTATION);
-  sendVarInt(currentPlayer->player_id);
+  sendVarInt(currentPlayer->id);
   sendShort(diffx);
   sendShort(diffy);
   sendShort(diffz);
@@ -336,7 +345,7 @@ void PlayS2Crotation(player_t *currentPlayer)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_ROTATION);
-  sendVarInt(currentPlayer->player_id);
+  sendVarInt(currentPlayer->id);
   sendByte(currentPlayer->nyaw);
   sendByte(currentPlayer->npitch);
   sendByte(currentPlayer->onground);
@@ -346,7 +355,7 @@ void PlayS2Cteleport(player_t *currentPlayer, double x, double y, double z)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_TELEPORT);
-  sendVarInt(currentPlayer->player_id);
+  sendVarInt(currentPlayer->id);
   sendDouble(x);
   sendDouble(y);
   sendDouble(z);
@@ -362,7 +371,7 @@ void PlayS2Cheadrotation(player_t *currentPlayer)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_HEAD_ROTATION);
-  sendVarInt(currentPlayer->player_id);
+  sendVarInt(currentPlayer->id);
   sendByte(currentPlayer->nyaw);
   sendDone();
 }
@@ -370,15 +379,8 @@ void PlayS2Centityanimation(player_t *currentPlayer, uint8_t animation)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_ENTITY_ANIMATION);
-  sendVarInt(currentPlayer->player_id);
+  sendVarInt(currentPlayer->id);
   sendByte(animation);
-  sendDone();
-}
-void PlayS2Ckick(player_t *currentPlayer, char *str)
-{
-  sendStart();
-  sendPlayPacketHeader(S2C_PLAY_KICK);
-  sendString(str, -1);
   sendDone();
 }
 void PlayS2Csignedchatmessage(player_t *currentPlayer, char *message, size_t len)
@@ -397,10 +399,10 @@ void PlayS2Csignedchatmessage(player_t *currentPlayer, char *message, size_t len
   sendString(buf, size);
   sendByte(0);
   sendVarInt(0);
-  sendUUID(currentPlayer->player_id);
+  sendUUID(currentPlayer->id);
   sendSwitchToLocalBuffer(buf, sizeof(buf));
   sendBuffer(json1, strlen(json1));
-  sendBuffer(currentPlayer->playername, strnlen(currentPlayer->playername, sizeof(currentPlayer->playername)));
+  sendBuffer(currentPlayer->name, strnlen(currentPlayer->name, sizeof(currentPlayer->name)));
   sendBuffer(json2, strlen(json2));
   size = sendRevertFromLocalBuffer();
   sendString(buf, size);
@@ -502,7 +504,7 @@ void PlayS2Centitydata(player_t *currentPlayer, uint8_t entity, EntityDataMetada
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_ENTITY_DATA);
-  sendVarInt(currentPlayer->player_id);
+  sendVarInt(currentPlayer->id);
   sendByte(entity); // Entity base class "Pose" field ENTITY_POSE
   sendByte(type);   // Type field
   sendVarInt(state);
@@ -515,6 +517,17 @@ void PlayS2Ccompassposition(player_t *currentPlayer, int32_t x, int32_t y, int32
   sendPlayPacketHeader(S2C_PLAY_COMPASS_POSITION);
   sendPosition(x, y, z);
   sendFloat(0);
+  sendDone();
+}
+void PlayS2Cdisconnect(player_t *currentPlayer, char *reason)
+{
+  static const unsigned char NBT_text[9] = {
+      0x0A, 0x08, 0x00, 0x04, 0x74, 0x65, 0x78, 0x74, 0x00};
+  sendStart();
+  sendPlayPacketHeader(S2C_PLAY_DISCONNECT);
+  sendBuffer((char *)NBT_text, 9);
+  sendString(reason, -1);
+  sendByte(0);
   sendDone();
 }
 void ConfigurationS2Cfeatures()
@@ -640,5 +653,14 @@ void ConfigurationS2Cready()
 {
   sendStart();
   sendConfigurationPacketHeader(S2C_CONFIGURATION_READY);
+  sendDone();
+}
+void ConfigurationS2Cdisconnect(player_t *currentPlayer, char *reason)
+{
+  char buffer[300];
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_DISCONNECT);
+  size_t len = snprintf(buffer, sizeof(buffer), "{\"text\":\"%s\"}", reason);
+  sendString(buffer, len);
   sendDone();
 }

@@ -107,7 +107,7 @@ static void readyPlayers()
         currentPlayer->gamePlayerData.bz = 0;
         currentPlayer->ability = ABILILTIES_CLEAR;
         currentPlayer->gamemode = 2;
-        PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->player_id);
+        PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->id);
         currentPlayer = currentPlayer->next;
         count++;
     }
@@ -214,7 +214,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
         currentPlayer->gamePlayerData.bx = 0;
         currentPlayer->gamePlayerData.bz = 0;
         currentPlayer->gamemode = 3;
-        PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->player_id);
+        PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->id);
         PlayS2Cteleport(currentPlayer, gameData.centerX, gameData.centerY + 4, gameData.centerZ);
         currentPlayer->teleport = 1;
         return;
@@ -228,7 +228,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
 
             if (currentPlayer->gamePlayerData.isPlaying)
             {
-                printChatFormatted("§a%s §ehas won the game!", currentPlayer->playername);
+                printChatFormatted("§a%s §ehas won the game!", currentPlayer->name);
                 memset(gameData.blocks, 0xff, sizeof(gameData.blocks));
                 drawArena(0, 0, 0);
                 gameData.isStarted = 0;
@@ -240,7 +240,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
                 currentPlayer->gamePlayerData.bz = 0;
                 currentPlayer->ability = ABILILTIES_CAN_FLY | ABILILTIES_FLYING;
                 currentPlayer->gamemode = 3;
-                PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->player_id);
+                PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->id);
             }
             return;
         }
@@ -309,9 +309,9 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
                 currentPlayer->gamePlayerData.bz = 0;
                 currentPlayer->ability = ABILILTIES_CAN_FLY | ABILILTIES_FLYING;
                 currentPlayer->gamemode = 3;
-                PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->player_id);
+                PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->id);
                 updatePlayerCount();
-                printChatFormatted("§a%s §ffell down (%ld/%ld)", currentPlayer->playername, gameData.players, gameData.initalPlayers);
+                printChatFormatted("§a%s §ffell down (%ld/%ld)", currentPlayer->name, gameData.players, gameData.initalPlayers);
                 PlayS2Cteleport(currentPlayer, gameData.centerX, gameData.centerY + 2, gameData.centerZ);
                 currentPlayer->teleport = 1;
             }

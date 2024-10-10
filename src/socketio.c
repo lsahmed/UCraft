@@ -15,7 +15,7 @@ uint8_t readPeekByte()
   if (readPacketVars.bufferpos > sizeof(readPacketVars.buffer))
   {
     printl(LOG_ERROR, "read buffer overflow!\n");
-    readPacketVars.player->remove_player = 1;
+    readPacketVars.player->remove_player_event = 1;
     return 0;
   }
   return readPacketVars.buffer[readPacketVars.bufferpos++];
@@ -101,7 +101,7 @@ int32_t readVarInt()
     if (position >= 32)
     {
       printl(LOG_ERROR, "VarInt is too big");
-      readPacketVars.player->remove_player = 1;
+      readPacketVars.player->remove_player_event = 1;
       return 0;
     }
   }
@@ -187,7 +187,7 @@ void sendExtByte(uint8_t b)
       if (buffer == NULL)
       {
         printl(LOG_ERROR, "Memory allocation failed globalbuffersize!\n");
-        sendPacketVars.player->remove_player = 1;
+        sendPacketVars.player->remove_player_event = 1;
         return;
       }
       // printl(LOG_INFO,"Buffer size: %ld %ld\n", sendPacketVars.globalbuffersize,sendPacketVars.globalbufferindex);
@@ -220,7 +220,7 @@ void sendclearGlobalBuffer()
       if (buffer == NULL)
       {
         printl(LOG_ERROR, "Memory de/allocation failed!\n");
-        sendPacketVars.player->remove_player = 1;
+        sendPacketVars.player->remove_player_event = 1;
         return;
       }
       sendPacketVars.globalbuffer = buffer;
@@ -246,7 +246,7 @@ void sendGlobalBuffer(player_t *player)
 }
 size_t sendData(uint8_t *data, size_t buffersize)
 {
-  int sock = sendPacketVars.player->player_fd;
+  int sock = sendPacketVars.player->fd;
   size_t totalSent = 0;
   // split the packet in fragments
   while (totalSent < buffersize)
@@ -270,18 +270,18 @@ size_t sendData(uint8_t *data, size_t buffersize)
         if (sendPacketVars.player->packet == NULL)
         {
           printl(LOG_ERROR, "Memory allocation failed alt packet!\n");
-          sendPacketVars.player->remove_player = 1;
+          sendPacketVars.player->remove_player_event = 1;
           return totalSent;
         }
         // copy the packet
         sendPacketVars.player->packet_len = remaining;
         memcpy(sendPacketVars.player->packet, (char *)data + totalSent, remaining);
-        sendPacketVars.player->packet_dispatch_flag = 1;
+        sendPacketVars.player->packet_dispatch_event = 1;
         return totalSent;
       }
       printl(LOG_ERROR, "could not send (%d) code %ld (%p %ld)\n", sock, r, data, totalSent);
       printl(LOG_ERROR, "errno: %s\n", strerror(errno));
-      sendPacketVars.player->remove_player = 1;
+      sendPacketVars.player->remove_player_event = 1;
       return totalSent;
     }
     totalSent += r;
@@ -312,7 +312,7 @@ void sendStartPlayer(player_t *player)
     if (buffer == NULL)
     {
       printl(LOG_ERROR, "Memory de/allocation failed buffer!\n");
-      sendPacketVars.player->remove_player = 1;
+      sendPacketVars.player->remove_player_event = 1;
       return;
     }
     sendPacketVars.buffer = buffer;
@@ -330,7 +330,7 @@ void sendMainByte(uint8_t byte)
     if (buffer == NULL)
     {
       printl(LOG_ERROR, "memory allocation failed buffer!\n");
-      sendPacketVars.player->remove_player = 1;
+      sendPacketVars.player->remove_player_event = 1;
       return;
     }
     // printl(LOG_INFO,"Buffer size: %ld\n", sendPacketVars.buffersize);
@@ -346,10 +346,6 @@ void sendDispatch()
 #ifdef ONLINE_MODE
     if (sendPacketVars.player->encryption_recv_event)
     {
-      if (sendPacketVars.player->remove_player)
-      {
-        return;
-      }
       int ret = mbedtls_aes_crypt_cfb8(&sendPacketVars.player->aes_ctx, MBEDTLS_AES_ENCRYPT, sendPacketVars.bufferindex, sendPacketVars.player->iv_encrypt, sendPacketVars.buffer, sendPacketVars.buffer);
       if (ret != 0)
       {
@@ -383,13 +379,13 @@ void sendByte(uint8_t b)
     if (sendPacketVars.localbufferindex >= sendPacketVars.localbuffersize)
     {
       printl(LOG_ERROR, "local buffer no more space! %ld/%ld\n", sendPacketVars.localbufferindex, sendPacketVars.localbuffersize);
-      sendPacketVars.player->remove_player = 1;
+      sendPacketVars.player->remove_player_event = 1;
       return;
     }
     if (sendPacketVars.localbuffer == NULL)
     {
       printl(LOG_ERROR, "local buffer NULL\n");
-      sendPacketVars.player->remove_player = 1;
+      sendPacketVars.player->remove_player_event = 1;
       return;
     }
     sendPacketVars.localbuffer[sendPacketVars.localbufferindex++] = b;
@@ -405,7 +401,7 @@ void sendByte(uint8_t b)
       if (buffer == NULL)
       {
         printl(LOG_ERROR, "Memory allocation failed!\n");
-        sendPacketVars.player->remove_player = 1;
+        sendPacketVars.player->remove_player_event = 1;
         return;
       }
       // printl(LOG_INFO,"Buffer size: %ld\n", sendPacketVars.packetsize);
@@ -421,8 +417,8 @@ void sendPlayPacketHeader(size_t id)
     sendByte(id);
     return;
   }
-  printl(LOG_ERROR, "Incorrect PLAY packet id ID:%ld player: %d\n", id, sendPacketVars.player->player_id);
-  sendPacketVars.player->remove_player = 1;
+  printl(LOG_ERROR, "Incorrect PLAY packet id ID:%ld player: %d\n", id, sendPacketVars.player->id);
+  sendPacketVars.player->remove_player_event = 1;
 }
 void sendConfigurationPacketHeader(size_t id)
 {
@@ -431,8 +427,8 @@ void sendConfigurationPacketHeader(size_t id)
     sendByte(id);
     return;
   }
-  printl(LOG_ERROR, "Incorrect CONFIG packet id ID:%ld player: %d\n", id, sendPacketVars.player->player_id);
-  sendPacketVars.player->remove_player = 1;
+  printl(LOG_ERROR, "Incorrect CONFIG packet id ID:%ld player: %d\n", id, sendPacketVars.player->id);
+  sendPacketVars.player->remove_player_event = 1;
 }
 void sendBuffer(const char *buf, size_t len)
 {
@@ -534,7 +530,7 @@ void sendDone()
     if (buffer == NULL)
     {
       printl(LOG_ERROR, "Memory de/allocation failed packet!\n");
-      sendPacketVars.player->remove_player = 1;
+      sendPacketVars.player->remove_player_event = 1;
       return;
     }
     sendPacketVars.packetbuffer = buffer;
@@ -574,7 +570,7 @@ void sendString(const char *str, size_t len)
   if (len > MAX_STRING_SIZE)
   {
     printl(LOG_ERROR, "Send string failed! len(%ld) > %ld\n", len, (size_t)MAX_STRING_SIZE);
-    sendPacketVars.player->remove_player = 1;
+    sendPacketVars.player->remove_player_event = 1;
     return;
   }
   sendVarInt(len);
