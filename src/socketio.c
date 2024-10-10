@@ -8,7 +8,7 @@
 static readPacketVars_t readPacketVars = {.pktbytes = -1};
 
 readPacketVars_t *readValues() { return (readPacketVars_t *)&readPacketVars; }
-uint8_t readAllowed() { return (readPacketVars.bufferpos < readPacketVars.buffersize); }
+uint8_t readAllowed() { return (readPacketVars.bufferpos < readPacketVars.pktsize); }
 void readStart(player_t *player) { readPacketVars.player = player; }
 uint8_t readPeekByte()
 {
@@ -365,7 +365,7 @@ void sendStart()
     sendPacketVars.packetsize = MEM_CHUNK_SIZE;
     if ((sendPacketVars.packetbuffer = U_malloc(sendPacketVars.packetsize)) == NULL)
     {
-      printl(LOG_ERROR, "malloc failed packetbuffer\n");
+      printl(LOG_ERROR, "U_malloc failed packetbuffer\n");
       return;
     }
   }

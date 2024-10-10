@@ -31,9 +31,9 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
         }
         readPacketValue->pktbytes = -1;
         readPacketValue->pktbytes = readVarInt();
-        if (readPacketValue->pktbytes > readPacketValue->buffersize || readPacketValue->pktbytes > READBUFSIZE)
+        if (readPacketValue->pktbytes > readPacketValue->pktsize || readPacketValue->pktbytes > READBUFSIZE)
         {
-            printl(LOG_WARN, "c2sHandler overflow! %ld/%ld\n", readPacketValue->pktbytes, readPacketValue->buffersize);
+            printl(LOG_WARN, "c2sHandler overflow! %ld/%ld\n", readPacketValue->pktbytes, readPacketValue->pktsize);
             currentPlayer->remove_player_event = 1;
             return;
         }
@@ -722,12 +722,12 @@ int UCraftStart(uint8_t *cleanup_flag)
                     }
                     if (read_size > 0 && read_size < READBUFSIZE)
                     {
-                        readPacketValue->buffersize = read_size;
+                        readPacketValue->pktsize = read_size;
                     }
 #ifdef ONLINE_MODE
                     if (player->encryption_recv_event)
                     {
-                        int ret = mbedtls_aes_crypt_cfb8(&player->aes_ctx, MBEDTLS_AES_DECRYPT, readPacketValue->buffersize, player->iv_decrypt, readPacketValue->buffer, readPacketValue->buffer);
+                        int ret = mbedtls_aes_crypt_cfb8(&player->aes_ctx, MBEDTLS_AES_DECRYPT, readPacketValue->pktsize, player->iv_decrypt, readPacketValue->buffer, readPacketValue->buffer);
                         if (ret != 0)
                         {
                             printl(LOG_ERROR, "aes decrypt failed %d\n", ret);

@@ -7,13 +7,14 @@
 #include <stdlib.h>
 #include <errno.h>
 
-
 struct readPacketVars_t
 {
   uint8_t buffer[READBUFSIZE];
   size_t bufferpos;
-  size_t buffersize; // current packet context
+  // current packet context
+  size_t pktsize;
   size_t pktbytes;
+  // player object
   player_t *player;
 };
 typedef struct readPacketVars_t readPacketVars_t;
@@ -22,23 +23,23 @@ struct sendPacketVars_t
 {
   //'main' or final buffer for the client
   uint8_t *buffer;
-  size_t bufferindex;
   size_t buffersize;
+  size_t bufferindex;
   // current packet for the player
   uint8_t *packetbuffer;
   size_t packetsize;
   size_t packetindex;
   // global buffer for all the clients
-  uint8_t switch_to_global_buffer;
+  uint8_t switch_to_global_buffer : 1;
   uint8_t *globalbuffer;
-  size_t globalbufferindex;
   size_t globalbuffersize;
+  size_t globalbufferindex;
   // local buffer
-  uint8_t switch_to_localbuffer;
+  uint8_t switch_to_localbuffer : 1;
   char *localbuffer;
-  size_t localbufferindex;
   size_t localbuffersize;
-
+  size_t localbufferindex;
+  // player object
   player_t *player;
 };
 typedef struct sendPacketVars_t sendPacketVars_t;
