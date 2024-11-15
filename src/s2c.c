@@ -545,7 +545,7 @@ void ConfigurationS2Cknownpacks()
   sendVarInt(1);
   sendString("minecraft", -1);
   sendString("core", -1);
-  sendString(VERSION, -1);
+  sendString(CLIENT_VERSION, -1);
   sendDone();
 }
 

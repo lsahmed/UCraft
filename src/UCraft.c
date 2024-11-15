@@ -641,6 +641,7 @@ int UCraftStart(uint8_t *cleanup_flag)
 
     max_sock = server_fd;
     printl(LOG_INFO, "UCraft server started!\n");
+    printl(LOG_INFO, "Supported client version: %s\n", CLIENT_VERSION);
     gamePreload();
     while (1)
     {
