@@ -145,6 +145,7 @@ int httpsRtr(player_t *currentPlayer)
     if (httpsData.timeout > AUTH_TIMEOUT)
     {
         printl(LOG_ERROR, "httpsRtr timeout\n");
+        strncpy((char *)currentPlayer->disconnect_reason, "Authentication Timeout", sizeof(((player_t *)0)->disconnect_reason));
         currentPlayer->remove_player_event = 1;
         return 0;
     }
@@ -342,6 +343,7 @@ int httpsRts(player_t *currentPlayer)
     if (httpsData.timeout > AUTH_TIMEOUT)
     {
         printl(LOG_ERROR, "httpsRtr timeout\n");
+        strncpy((char *)currentPlayer->disconnect_reason, "Authentication Timeout", sizeof(((player_t *)0)->disconnect_reason));
         currentPlayer->remove_player_event = 1;
         return 0;
     }
