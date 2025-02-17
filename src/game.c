@@ -164,6 +164,7 @@ static void startGame(size_t playerCount)
     if ((gameData.players == 0) && gameData.initalPlayers)
     {
         printl(LOG_WARN, "deadlock, resting game state\n");
+        printChatFormatted("§4Game is in an invalid state! Reseting!");
         memset(gameData.blocks, 0xff, sizeof(gameData.blocks));
         drawArena(0, 0, 0);
         gameData.isStarted = 0;
@@ -171,6 +172,20 @@ static void startGame(size_t playerCount)
         gameData.players = 0;
         gameData.startDelay = 1000;
     }
+}
+static playerFellDown(player_t *currentPlayer)
+{
+    currentPlayer->gamePlayerData.isPlaying = 0;
+    currentPlayer->gamePlayerData.isSpectating = 1;
+    currentPlayer->gamePlayerData.bx = 0;
+    currentPlayer->gamePlayerData.bz = 0;
+    currentPlayer->ability = ABILILTIES_FLYING;
+    currentPlayer->gamemode = 3;
+    PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->id);
+    PlayS2Cteleport(currentPlayer, gameData.centerX, gameData.centerY + 2, gameData.centerZ);
+    currentPlayer->teleport = 1;
+    updatePlayerCount();
+    printChatFormatted("§a%s §ffell down (%ld/%ld)", currentPlayer->name, gameData.players, gameData.initalPlayers);
 }
 // fired when the server is about to start
 void gamePreload()
@@ -209,15 +224,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
     int32_t maxDistance = GAME_RADIUS + 10;
     if (currentPlayer->x > maxDistance || currentPlayer->x < -maxDistance || currentPlayer->y > maxDistance || currentPlayer->y < -maxDistance || currentPlayer->z > maxDistance || currentPlayer->z < -maxDistance)
     {
-        currentPlayer->gamePlayerData.isPlaying = 0;
-        currentPlayer->gamePlayerData.isSpectating = 1;
-        currentPlayer->gamePlayerData.bx = 0;
-        currentPlayer->gamePlayerData.bz = 0;
-        currentPlayer->gamemode = 3;
-        PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->id);
-        PlayS2Cteleport(currentPlayer, gameData.centerX, gameData.centerY + 4, gameData.centerZ);
-        currentPlayer->teleport = 1;
-        return;
+        playerFellDown(currentPlayer);
     }
     // Game is started
     if (gameData.isStarted)
@@ -303,17 +310,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
             // check if the player fell down
             if (currentPlayer->y < gameData.centerY - 4)
             {
-                currentPlayer->gamePlayerData.isPlaying = 0;
-                currentPlayer->gamePlayerData.isSpectating = 1;
-                currentPlayer->gamePlayerData.bx = 0;
-                currentPlayer->gamePlayerData.bz = 0;
-                currentPlayer->ability = ABILILTIES_CAN_FLY | ABILILTIES_FLYING;
-                currentPlayer->gamemode = 3;
-                PlayS2Ctablist(currentPlayer, TABLIST_ACTION_GAMEMODE, currentPlayer->id);
-                updatePlayerCount();
-                printChatFormatted("§a%s §ffell down (%ld/%ld)", currentPlayer->name, gameData.players, gameData.initalPlayers);
-                PlayS2Cteleport(currentPlayer, gameData.centerX, gameData.centerY + 2, gameData.centerZ);
-                currentPlayer->teleport = 1;
+                playerFellDown(currentPlayer);
             }
         }
     }

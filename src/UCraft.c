@@ -153,7 +153,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
         case 3: // config state
             if (cmd < C2S_CONFIGURATION_MAPPING_LEN)
             {
-                void (**packet_handler)(player_t *) = c2s_configuration_1_20_5_1_21_1;
+                void (**packet_handler)(player_t *) = c2s_configuration_1_21_4;
                 if (packet_handler[cmd] != NULL)
                 {
                     if (*packet_handler[cmd] != NULL)
@@ -166,7 +166,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
         case 4: // play state
             if (cmd < C2S_PLAY_MAPPING_LEN)
             {
-                void (**packet_handler)(player_t *) = c2s_play_1_20_5_1_21_1;
+                void (**packet_handler)(player_t *) = c2s_play_1_21_4;
                 if (packet_handler[cmd] != NULL)
                 {
                     if (*packet_handler[cmd] != NULL)
@@ -317,7 +317,7 @@ static void s2cHandler()
         {
             // printl(LOG_INFO,"player %d ingame\n",currentPlayer->player_id);
             sendRevertFromGlobalBuffer();
-            if ((main_tick % 500) == 0)
+            if ((main_tick % 1000) == 0)
             {
                 if (currentPlayer->heartbeat == 0)
                 {

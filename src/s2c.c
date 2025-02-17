@@ -121,8 +121,7 @@ void LoginS2Csuccess(player_t *currentPlayer)
   }
 #else
   sendVarInt(0); // Number Of Properties
-#endif         /*ONLINE_MODE_AUTH*/
-  sendByte(1); // Strict error checking
+#endif /*ONLINE_MODE_AUTH*/
   sendDone();
 }
 // Play packets
@@ -130,7 +129,7 @@ void LoginS2Csuccess(player_t *currentPlayer)
 void PlayS2Clogin(player_t *currentPlayer)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_INITIALIZE);
+  sendPlayPacketHeader(S2C_PLAY_LOGIN);
   sendInt(currentPlayer->id);
   sendByte(0);                 // Is hardcore
   sendVarInt(1);               // World Count
@@ -146,18 +145,19 @@ void PlayS2Clogin(player_t *currentPlayer)
   sendLong(0x482304890);       //{hashedSeed} random bytes
   sendByte(GAMEMODE);          // gamemode
   currentPlayer->gamemode = GAMEMODE;
-  sendByte(-1);  // previous gamemode
-  sendByte(0);   // Is Debug
-  sendByte(0);   // Is Flat
-  sendByte(0);   // Has death location
-  sendVarInt(0); // Portal cooldown
-  sendByte(0);   // Enforces Secure Chat
+  sendByte(-1);   // previous gamemode
+  sendByte(0);    // Is Debug
+  sendByte(0);    // Is Flat
+  sendByte(0);    // Has death location
+  sendVarInt(0);  // Portal cooldown
+  sendVarInt(64); // Sea level
+  sendByte(0);    // Enforces Secure Chat
   sendDone();
 }
 void PlayS2Ctablist(player_t *currentPlayer, TabListAction action, uint16_t eid)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_TAB_LIST);
+  sendPlayPacketHeader(S2C_PLAY_PLAYER_INFO_UPDATE);
   // TODO: handle more actions
   sendByte(action);
   sendVarInt(1); // Number Of Actions
@@ -221,7 +221,7 @@ void PlayS2Cplayerabilities(player_t *currentPlayer, PlayerAbilities abilities)
 void PlayS2Ctablistremove(uint16_t eid)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_TAB_LIST_REMOVE);
+  sendPlayPacketHeader(S2C_PLAY_PLAYER_INFO_REMOVE);
   sendVarInt(1);
   sendUUID(eid);
   sendDone();
@@ -229,7 +229,7 @@ void PlayS2Ctablistremove(uint16_t eid)
 void PlayS2Cspawnentity(player_t *currentPlayer, EntityMetadataType type)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_ENTITY_OBJECT_SPAWN);
+  sendPlayPacketHeader(S2C_PLAY_ADD_ENTITY);
   sendVarInt(currentPlayer->id);
   sendUUID(currentPlayer->id);
   sendVarInt(type);
@@ -248,20 +248,24 @@ void PlayS2Cspawnentity(player_t *currentPlayer, EntityMetadataType type)
 void PlayS2Cpositionrotation(player_t *currentPlayer, double x, double y, double z)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_POSITION_ROTATION);
+  sendPlayPacketHeader(S2C_PLAY_PLAYER_POSITION);
+  sendVarInt(0); // teleportId
   sendDouble(x);
   sendDouble(y);
   sendDouble(z);
+  // TODO: velocity fields, unknown for now
+  sendDouble(0); // x
+  sendDouble(0); // y
+  sendDouble(0); // z
   sendFloat(currentPlayer->yaw);
   sendFloat(currentPlayer->pitch);
-  sendByte(0);   // xyz absolute
-  sendVarInt(0); // teleportId
+  sendInt(0); // xyz absolute
   sendDone();
 }
 void PlayS2Cchunkcenter(player_t *currentPlayer, int32_t x, int32_t z)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_CHUNK_CENTER);
+  sendPlayPacketHeader(S2C_PLAY_SET_CHUNK_CACHE_CENTER);
   sendVarInt(x);
   sendVarInt(z);
   sendDone();
@@ -272,7 +276,7 @@ void PlayS2Cchunk(player_t *currentPlayer, int32_t x, int32_t z)
   // generation!
   char block_entity[256];
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_CHUNK);
+  sendPlayPacketHeader(S2C_PLAY_LEVEL_CHUNK_WITH_LIGHT);
   sendInt(x);
   sendInt(z);
   // NBT start
@@ -313,38 +317,14 @@ void PlayS2Cchunk(player_t *currentPlayer, int32_t x, int32_t z)
 void PlayS2Cheartbeat(player_t *currentPlayer)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_HEARTBEAT);
+  sendPlayPacketHeader(S2C_PLAY_KEEP_ALIVE);
   sendLong(main_tick);
-  sendDone();
-}
-void PlayS2Crelativemove(player_t *currentPlayer, int16_t diffx, int16_t diffy, int16_t diffz)
-{
-  sendStart();
-  sendPlayPacketHeader(S2C_PLAY_RELATIVE_MOVE);
-  sendVarInt(currentPlayer->id);
-  sendShort(diffx);
-  sendShort(diffy);
-  sendShort(diffz);
-  sendByte(currentPlayer->onground);
-  sendDone();
-}
-void PlayS2Cmovementrotation(player_t *currentPlayer, int16_t diffx, int16_t diffy, int16_t diffz)
-{
-  sendStart();
-  sendPlayPacketHeader(S2C_PLAY_MOVEMENT_ROTATION);
-  sendVarInt(currentPlayer->id);
-  sendShort(diffx);
-  sendShort(diffy);
-  sendShort(diffz);
-  sendByte(currentPlayer->nyaw);
-  sendByte(currentPlayer->npitch);
-  sendByte(currentPlayer->onground);
   sendDone();
 }
 void PlayS2Crotation(player_t *currentPlayer)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_ROTATION);
+  sendPlayPacketHeader(S2C_PLAY_MOVE_ENTITY_ROT);
   sendVarInt(currentPlayer->id);
   sendByte(currentPlayer->nyaw);
   sendByte(currentPlayer->npitch);
@@ -354,13 +334,17 @@ void PlayS2Crotation(player_t *currentPlayer)
 void PlayS2Cteleport(player_t *currentPlayer, double x, double y, double z)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_TELEPORT);
+  sendPlayPacketHeader(S2C_PLAY_ENTITY_POSITION_SYNC);
   sendVarInt(currentPlayer->id);
   sendDouble(x);
   sendDouble(y);
   sendDouble(z);
-  sendByte(currentPlayer->nyaw);
-  sendByte(currentPlayer->npitch);
+  // TODO: Velocity fields
+  sendDouble(0);
+  sendDouble(0);
+  sendDouble(0);
+  sendFloat(currentPlayer->yaw);
+  sendFloat(currentPlayer->pitch);
   sendByte(currentPlayer->onground);
   sendDone();
   currentPlayer->x = x;
@@ -370,7 +354,7 @@ void PlayS2Cteleport(player_t *currentPlayer, double x, double y, double z)
 void PlayS2Cheadrotation(player_t *currentPlayer)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_HEAD_ROTATION);
+  sendPlayPacketHeader(S2C_PLAY_ROTATE_HEAD);
   sendVarInt(currentPlayer->id);
   sendByte(currentPlayer->nyaw);
   sendDone();
@@ -378,46 +362,18 @@ void PlayS2Cheadrotation(player_t *currentPlayer)
 void PlayS2Centityanimation(player_t *currentPlayer, uint8_t animation)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_ENTITY_ANIMATION);
+  sendPlayPacketHeader(S2C_PLAY_ANIMATE);
   sendVarInt(currentPlayer->id);
   sendByte(animation);
   sendDone();
 }
-void PlayS2Csignedchatmessage(player_t *currentPlayer, char *message, size_t len)
-{
 
-  char buf[300];
-  static const char json1[] = "{\"text\":\"";
-  static const char json2[] = "\"}";
-  sendStart();
-  sendPlayPacketHeader(S2C_PLAY_SIGNED_CHAT_MESSAGE);
-  sendSwitchToLocalBuffer(buf, sizeof(buf));
-  sendBuffer(json1, strlen(json1));
-  sendBuffer(message, len);
-  sendBuffer(json2, strlen(json2));
-  size_t size = sendRevertFromLocalBuffer();
-  sendString(buf, size);
-  sendByte(0);
-  sendVarInt(0);
-  sendUUID(currentPlayer->id);
-  sendSwitchToLocalBuffer(buf, sizeof(buf));
-  sendBuffer(json1, strlen(json1));
-  sendBuffer(currentPlayer->name, strnlen(currentPlayer->name, sizeof(currentPlayer->name)));
-  sendBuffer(json2, strlen(json2));
-  size = sendRevertFromLocalBuffer();
-  sendString(buf, size);
-  sendByte(0);
-  sendLong(currentPlayer->chat_timestamp);
-  sendLong(0);
-  sendVarInt(0); // Signature Length
-  sendDone();
-}
 void PlayS2Csysmessage(char *message, size_t len)
 {
   static const unsigned char NBT_text[9] = {
       0x0A, 0x08, 0x00, 0x04, 0x74, 0x65, 0x78, 0x74, 0x00};
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_SYSTEM_CHAT_MESSAGE);
+  sendPlayPacketHeader(S2C_PLAY_SYSTEM_CHAT);
   sendBuffer((char *)NBT_text, 9);
   sendString(message, len);
   sendByte(0);
@@ -427,7 +383,7 @@ void PlayS2Csysmessage(char *message, size_t len)
 void PlayS2Centitydestroy(int32_t eid)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_ENTITY_DESTROY);
+  sendPlayPacketHeader(S2C_PLAY_REMOVE_ENTITIES);
   sendVarInt(1);
   sendVarInt(eid);
   sendDone();
@@ -435,7 +391,7 @@ void PlayS2Centitydestroy(int32_t eid)
 void PlayS2Cblock(blocksDefaultState blockstate, int32_t x, int32_t y, int32_t z)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_BLOCK);
+  sendPlayPacketHeader(S2C_PLAY_BLOCK_UPDATE);
   sendPosition(x, y, z);
   sendVarInt(blockstate);
   sendDone();
@@ -444,7 +400,7 @@ void PlayS2Cblock(blocksDefaultState blockstate, int32_t x, int32_t y, int32_t z
 void PlayS2Cblockbreak(player_t *currentPlayer, int32_t sequence)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_BLOCK_BREAK);
+  sendPlayPacketHeader(S2C_PLAY_BLOCK_CHANGED_ACK);
   sendVarInt(sequence);
   sendDone();
 }
@@ -456,7 +412,7 @@ void PlayS2Cbossbar(player_t *currentPlayer, uint16_t uuid, int32_t action, char
   static const char json1[] = "{\"text\":\"";
   static const char json2[] = "\"}";
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_BOSSBAR);
+  sendPlayPacketHeader(S2C_PLAY_BOSS_EVENT);
   sendUUID(uuid);
   sendVarInt(action);
   switch (action)
@@ -503,10 +459,10 @@ void PlayS2Cbossbar(player_t *currentPlayer, uint16_t uuid, int32_t action, char
 void PlayS2Centitydata(player_t *currentPlayer, uint8_t entity, EntityDataMetadata type, State state)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_ENTITY_DATA);
+  sendPlayPacketHeader(S2C_PLAY_SET_ENTITY_DATA);
   sendVarInt(currentPlayer->id);
   sendByte(entity); // Entity base class "Pose" field ENTITY_POSE
-  sendByte(type);   // Type field
+  sendVarInt(type); // Metadata
   sendVarInt(state);
   sendByte(0xff);
   sendDone();
@@ -514,7 +470,7 @@ void PlayS2Centitydata(player_t *currentPlayer, uint8_t entity, EntityDataMetada
 void PlayS2Ccompassposition(player_t *currentPlayer, int32_t x, int32_t y, int32_t z)
 {
   sendStart();
-  sendPlayPacketHeader(S2C_PLAY_COMPASS_POSITION);
+  sendPlayPacketHeader(S2C_PLAY_SET_DEFAULT_SPAWN_POSITION);
   sendPosition(x, y, z);
   sendFloat(0);
   sendDone();
@@ -533,7 +489,7 @@ void PlayS2Cdisconnect(player_t *currentPlayer, char *reason)
 void ConfigurationS2Cfeatures()
 {
   sendStart();
-  sendConfigurationPacketHeader(S2C_CONFIGURATION_FEATURES);
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_UPDATE_ENABLED_FEATURES);
   sendVarInt(1);
   sendString("vanilla", -1);
   sendDone();
@@ -541,7 +497,7 @@ void ConfigurationS2Cfeatures()
 void ConfigurationS2Cknownpacks()
 {
   sendStart();
-  sendConfigurationPacketHeader(S2C_CONFIGURATION_KNOWN_PACKS);
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_SELECT_KNOWN_PACKS);
   sendVarInt(1);
   sendString("minecraft", -1);
   sendString("core", -1);
@@ -552,7 +508,7 @@ void ConfigurationS2Cknownpacks()
 void ConfigurationS2Cregistry()
 {
   sendStart();
-  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
   sendString("dimension_type", -1);
   sendVarInt(1);
   sendString("overworld", -1);
@@ -564,7 +520,7 @@ void ConfigurationS2Cregistry()
       "snowy_taiga",
   };
   sendStart();
-  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
   sendString("worldgen/biome", -1);
   sendVarInt(sizeof(biomes) / sizeof(char *));
   for (size_t i = 0; i < (size_t)(sizeof(biomes) / sizeof(char *)); i++)
@@ -583,6 +539,7 @@ void ConfigurationS2Cregistry()
       "dragon_breath",
       "drown",
       "dry_out",
+      "ender_pearl",
       "explosion",
       "fall",
       "falling_anvil",
@@ -600,6 +557,7 @@ void ConfigurationS2Cregistry()
       "indirect_magic",
       "lava",
       "lightning_bolt",
+      "mace_smash",
       "magic",
       "mob_attack",
       "mob_attack_no_aggro",
@@ -623,7 +581,7 @@ void ConfigurationS2Cregistry()
       "wither",
       "wither_skull"};
   sendStart();
-  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
   sendString("damage_type", -1);
   sendVarInt(sizeof(damage_types) / sizeof(char *));
   for (size_t i = 0; i < (size_t)(sizeof(damage_types) / sizeof(char *)); i++)
@@ -634,7 +592,7 @@ void ConfigurationS2Cregistry()
   sendDone();
 
   sendStart();
-  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
   sendString("wolf_variant", -1);
   sendVarInt(1);
   sendString("ashen", -1);
@@ -642,7 +600,7 @@ void ConfigurationS2Cregistry()
   sendDone();
 
   sendStart();
-  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRIES);
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
   sendString("painting_variant", -1);
   sendVarInt(1);
   sendString("alban", -1);
@@ -652,7 +610,7 @@ void ConfigurationS2Cregistry()
 void ConfigurationS2Cready()
 {
   sendStart();
-  sendConfigurationPacketHeader(S2C_CONFIGURATION_READY);
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_FINISH_CONFIGURATION);
   sendDone();
 }
 void ConfigurationS2Cdisconnect(player_t *currentPlayer, char *reason)

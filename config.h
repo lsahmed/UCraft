@@ -4,7 +4,6 @@
 
 #define PORT 25565
 
-#define MAX_BLOCKS 100
 #define MAX_PLAYERS 20
 
 // #define COMPRESSION
@@ -23,9 +22,9 @@
 #define VIEWDISTANCE 12
 #define RESPAWNSCREEN 1
 
-#define CLIENT_VERSION "1.21.1"
-#define PROTOCOL_VERSION 767
-#define LONG_PROTOCOL_VERSION "\\u00A7c UCraft: 1.21.1"
+#define CLIENT_VERSION "1.21.4"
+#define PROTOCOL_VERSION 769
+#define LONG_PROTOCOL_VERSION "\\u00A7c UCraft: 1.21.4"
 #define MOTD "\\u00A7a\\u00A7lUCraft\\u00A7r\\u00A7l server written in C :D"
 
 // Game config

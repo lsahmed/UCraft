@@ -1,263 +1,271 @@
 #include "c2s.h"
 
-static void PlayC2S_confirm_teleport(player_t *currentPlayer) {}
-static void PlayC2S_block_nbt(player_t *currentPlayer) {}
-static void PlayC2S_difficulty(player_t *currentPlayer) {}
-static void PlayC2S_message_acknowledgement(player_t *currentPlayer) {}
-static void PlayC2S_command(player_t *currentPlayer) {}
-static void PlayC2S_signed_command(player_t *currentPlayer) {}
-
+static void PlayC2S_accept_teleportation(player_t *currentPlayer) {}
+static void PlayC2S_block_entity_tag_query(player_t *currentPlayer) {}
+static void PlayC2S_bundle_item_selected(player_t *currentPlayer) {}
+static void PlayC2S_change_difficulty(player_t *currentPlayer) {}
+static void PlayC2S_chat_ack(player_t *currentPlayer) {}
+static void PlayC2S_chat_command(player_t *currentPlayer) {}
+static void PlayC2S_chat_command_signed(player_t *currentPlayer) {}
 static char chat_buffer[300];
 uint8_t chat_inuse = 0;
-static void PlayC2S_signed_chat_message(player_t *currentPlayer)
+static void PlayC2S_chat(player_t *currentPlayer)
 {
-  if (!chat_inuse)
-  {
-    int32_t length = readVarInt();
-    if (length <= 255)
+    if (!chat_inuse)
     {
-      memset(chat_buffer, 0, sizeof(chat_buffer));
-      // add the decorators, very ugly but trying to avoid using snprintf here
-      chat_buffer[0] = '<';
-      char *name = strncpy(&chat_buffer[1], currentPlayer->name, sizeof(((player_t *)0)->name));
-      char *footer = &name[strnlen(name, sizeof(((player_t *)0)->name))];
-      *footer++ = '>';
-      *footer++ = ' ';
-      for (int i = 0; i < length; i++)
-      {
-        readBuffer(&footer[i], 1);
-        if (footer[i] < ' ')
+        int32_t length = readVarInt();
+        if (length <= 255)
         {
-          chat_inuse = 0;
-          return;
+            memset(chat_buffer, 0, sizeof(chat_buffer));
+            // add the decorators, very ugly but trying to avoid using snprintf here
+            chat_buffer[0] = '<';
+            char *name = strncpy(&chat_buffer[1], currentPlayer->name, sizeof(((player_t *)0)->name));
+            char *footer = &name[strnlen(name, sizeof(((player_t *)0)->name))];
+            *footer++ = '>';
+            *footer++ = ' ';
+            for (int i = 0; i < length; i++)
+            {
+                readBuffer(&footer[i], 1);
+                if (footer[i] < ' ')
+                {
+                    chat_inuse = 0;
+                    return;
+                }
+                if (footer[i] == '\"')
+                {
+                    chat_inuse = 0;
+                    return;
+                }
+                // remove '_' since its valid
+                if ((footer[i] >= '[' && footer[i] <= '`') && footer[i] != '_')
+                {
+                    chat_inuse = 0;
+                    return;
+                }
+                if (footer[i] >= '{')
+                {
+                    chat_inuse = 0;
+                    return;
+                }
+                if (footer[i] == 0)
+                {
+                    i--;
+                    break;
+                }
+            }
+            currentPlayer->chat_timestamp = readLong();
+            currentPlayer->chat_event = 1;
+            currentPlayer->chat_len = strnlen(chat_buffer, sizeof(chat_buffer)); // do not count the null char
+            currentPlayer->chat_ptr = chat_buffer;
+            chat_inuse = 1;
         }
-        if (footer[i] == '\"')
-        {
-          chat_inuse = 0;
-          return;
-        }
-        // remove '_' since its valid
-        if ((footer[i] >= '[' && footer[i] <= '`') && footer[i] != '_')
-        {
-          chat_inuse = 0;
-          return;
-        }
-        if (footer[i] >= '{')
-        {
-          chat_inuse = 0;
-          return;
-        }
-        if (footer[i] == 0)
-        {
-          i--;
-          break;
-        }
-      }
-      currentPlayer->chat_timestamp = readLong();
-      currentPlayer->chat_event = 1;
-      currentPlayer->chat_len = strnlen(chat_buffer, sizeof(chat_buffer)); // do not count the null char
-      currentPlayer->chat_ptr = chat_buffer;
-      chat_inuse = 1;
     }
-  }
 }
-static void PlayC2S_client_action(player_t *currentPlayer) {}
-static void PlayC2S_settings(player_t *currentPlayer)
+static void PlayC2S_chat_session_update(player_t *currentPlayer) {}
+static void PlayC2S_chunk_batch_received(player_t *currentPlayer) {}
+static void PlayC2S_client_command(player_t *currentPlayer) {}
+static void PlayC2S_client_tick_end(player_t *currentPlayer) {}
+static void PlayC2S_client_information(player_t *currentPlayer)
 {
-  char buf[17];
-  readString(buf, sizeof(buf));           // Locale
-  readByte();                             // View Distance
-  readVarInt();                           // Chat Mode
-  readByte();                             // Chat Colors
-  currentPlayer->skin_parts = readByte(); // Displayed Skin Parts
-  readVarInt();                           // Main Hand
-  readByte();                             // Disable Text Filter
-  readByte();                             // Allow server listing
-  currentPlayer->settings_changed_event = 1;
+    char buf[17];
+    readString(buf, sizeof(buf));           // Locale
+    readByte();                             // View Distance
+    readVarInt();                           // Chat Mode
+    readByte();                             // Chat Colors
+    currentPlayer->skin_parts = readByte(); // Displayed Skin Parts
+    readVarInt();                           // Main Hand
+    readByte();                             // Disable Text Filter
+    readByte();                             // Allow server listing
+    currentPlayer->settings_changed_event = 1;
 }
-static void PlayC2S_command_suggestions(player_t *currentPlayer) {}
-static void PlayC2S_reconfigure(player_t *currentPlayer) {}
-static void PlayC2S_container_button(player_t *currentPlayer) {}
+static void PlayC2S_command_suggestion(player_t *currentPlayer) {}
+static void PlayC2S_configuration_acknowledged(player_t *currentPlayer) {}
+static void PlayC2S_container_button_click(player_t *currentPlayer) {}
 static void PlayC2S_container_click(player_t *currentPlayer) {}
-static void PlayC2S_close_container(player_t *currentPlayer) {}
-static void PlayC2S_crafter_slot_lock(player_t *currentPlayer) {}
+static void PlayC2S_container_close(player_t *currentPlayer) {}
+static void PlayC2S_container_slot_state_changed(player_t *currentPlayer) {}
 static void PlayC2S_cookie_response(player_t *currentPlayer) {}
-static void PlayC2S_channel(player_t *currentPlayer) {}
+static void PlayC2S_custom_payload(player_t *currentPlayer) {}
 static void PlayC2S_debug_sample_subscription(player_t *currentPlayer) {}
-static void PlayC2S_book(player_t *currentPlayer) {}
-static void PlayC2S_entity_nbt(player_t *currentPlayer) {}
-static void PlayC2S_entity_interact(player_t *currentPlayer) {}
-static void PlayC2S_generate_structure(player_t *currentPlayer) {}
-static void PlayC2S_heartbeat(player_t *currentPlayer)
+static void PlayC2S_edit_book(player_t *currentPlayer) {}
+static void PlayC2S_entity_tag_query(player_t *currentPlayer) {}
+static void PlayC2S_interact(player_t *currentPlayer) {}
+static void PlayC2S_jigsaw_generate(player_t *currentPlayer) {}
+static void PlayC2S_keep_alive(player_t *currentPlayer)
 {
-  currentPlayer->heartbeat = 1;
+    currentPlayer->heartbeat = 1;
 }
 static void PlayC2S_lock_difficulty(player_t *currentPlayer) {}
-static void PlayC2S_position(player_t *currentPlayer)
+static void PlayC2S_move_player_pos(player_t *currentPlayer)
 {
-  currentPlayer->x = readDouble();
-  currentPlayer->y = readDouble();
-  currentPlayer->z = readDouble();
-  currentPlayer->onground = readByte();
-  currentPlayer->position_event = 1;
+    currentPlayer->x = readDouble();
+    currentPlayer->y = readDouble();
+    currentPlayer->z = readDouble();
+    currentPlayer->onground = readByte();
+    currentPlayer->position_event = 1;
 }
-static void PlayC2S_position_rotation(player_t *currentPlayer)
+static void PlayC2S_move_player_pos_rot(player_t *currentPlayer)
 {
-  currentPlayer->x = readDouble();
-  currentPlayer->y = readDouble();
-  currentPlayer->z = readDouble();
-  currentPlayer->yaw = readFloat();
-  currentPlayer->pitch = readFloat();
-  currentPlayer->onground = readByte();
-  currentPlayer->position_event = 1;
+    currentPlayer->x = readDouble();
+    currentPlayer->y = readDouble();
+    currentPlayer->z = readDouble();
+    currentPlayer->yaw = readFloat();
+    currentPlayer->pitch = readFloat();
+    currentPlayer->onground = readByte();
+    currentPlayer->position_event = 1;
 }
-static void PlayC2S_rotation(player_t *currentPlayer)
+static void PlayC2S_move_player_rot(player_t *currentPlayer)
 {
-  currentPlayer->yaw = readFloat();
-  currentPlayer->pitch = readFloat();
-  currentPlayer->onground = readByte();
-  currentPlayer->position_event = 1;
+    currentPlayer->yaw = readFloat();
+    currentPlayer->pitch = readFloat();
+    currentPlayer->onground = readByte();
+    currentPlayer->position_event = 1;
 }
-static void PlayC2S_ground_change(player_t *currentPlayer) {}
+static void PlayC2S_move_player_status_only(player_t *currentPlayer) {}
 static void PlayC2S_move_vehicle(player_t *currentPlayer) {}
-static void PlayC2S_steer_boat(player_t *currentPlayer) {}
-static void PlayC2S_item_pick(player_t *currentPlayer) {}
-static void PlayC2S_ping(player_t *currentPlayer) {}
-static void PlayC2S_crafting_recipe(player_t *currentPlayer) {}
-static void PlayC2S_toggle_fly(player_t *currentPlayer) {}
+static void PlayC2S_paddle_boat(player_t *currentPlayer) {}
+static void PlayC2S_pick_item_from_block(player_t *currentPlayer) {}
+static void PlayC2S_pick_item_from_entity(player_t *currentPlayer) {}
+static void PlayC2S_ping_request(player_t *currentPlayer) {}
+static void PlayC2S_place_recipe(player_t *currentPlayer) {}
+static void PlayC2S_player_abilities(player_t *currentPlayer) {}
 static void PlayC2S_player_action(player_t *currentPlayer) {}
-static void PlayC2S_entity_action(player_t *currentPlayer)
+static void PlayC2S_player_command(player_t *currentPlayer)
 {
-  int32_t eid = readVarInt();
-  if (eid == currentPlayer->id)
-  {
-    currentPlayer->entity_action_id = readVarInt();
-    readVarInt();
-    currentPlayer->entity_action_event = 1;
-  }
+    int32_t eid = readVarInt();
+    if (eid == currentPlayer->id)
+    {
+        currentPlayer->entity_action_id = readVarInt();
+        readVarInt();
+        currentPlayer->entity_action_event = 1;
+    }
 }
-static void PlayC2S_vehicle_input(player_t *currentPlayer) {}
+static void PlayC2S_player_input(player_t *currentPlayer) {}
+static void PlayC2S_player_loaded(player_t *currentPlayer) {}
 static void PlayC2S_pong(player_t *currentPlayer) {}
-static void PlayC2S_session_data(player_t *currentPlayer) {}
-static void PlayC2S_next_chunk_batch(player_t *currentPlayer) {}
-static void PlayC2S_displayed_recipe(player_t *currentPlayer) {}
-static void PlayC2S_recipe_book(player_t *currentPlayer) {}
-static void PlayC2S_anvil_item_name(player_t *currentPlayer) {}
-static void PlayC2S_resourcepack(player_t *currentPlayer) {}
-static void PlayC2S_advancement_tab(player_t *currentPlayer) {}
-static void PlayC2S_trade(player_t *currentPlayer) {}
-static void PlayC2S_beacon_effect(player_t *currentPlayer) {}
-static void PlayC2S_hotbar_slot(player_t *currentPlayer) {}
-static void PlayC2S_command_block(player_t *currentPlayer) {}
-static void PlayC2S_minecart_command_block(player_t *currentPlayer) {}
-static void PlayC2S_item_stack_create(player_t *currentPlayer) {}
-static void PlayC2S_jigsaw_block(player_t *currentPlayer) {}
-static void PlayC2S_structure_block(player_t *currentPlayer) {}
-static void PlayC2S_sign_text(player_t *currentPlayer) {}
-static void PlayC2S_swing_arm(player_t *currentPlayer)
+static void PlayC2S_recipe_book_change_settings(player_t *currentPlayer) {}
+static void PlayC2S_recipe_book_seen_recipe(player_t *currentPlayer) {}
+static void PlayC2S_rename_item(player_t *currentPlayer) {}
+static void PlayC2S_resource_pack(player_t *currentPlayer) {}
+static void PlayC2S_seen_advancements(player_t *currentPlayer) {}
+static void PlayC2S_select_trade(player_t *currentPlayer) {}
+static void PlayC2S_set_beacon(player_t *currentPlayer) {}
+static void PlayC2S_set_carried_item(player_t *currentPlayer) {}
+static void PlayC2S_set_command_block(player_t *currentPlayer) {}
+static void PlayC2S_set_command_minecart(player_t *currentPlayer) {}
+static void PlayC2S_set_creative_mode_slot(player_t *currentPlayer) {}
+static void PlayC2S_set_jigsaw_block(player_t *currentPlayer) {}
+static void PlayC2S_set_structure_block(player_t *currentPlayer) {}
+static void PlayC2S_sign_update(player_t *currentPlayer) {}
+static void PlayC2S_swing(player_t *currentPlayer)
 {
-  currentPlayer->swing_arm_animation = readVarInt();
-  currentPlayer->swing_arm_event = 1;
+    currentPlayer->swing_arm_animation = readVarInt();
+    currentPlayer->swing_arm_event = 1;
 }
-static void PlayC2S_entity_spectate(player_t *currentPlayer) {}
-static void PlayC2S_block_interact(player_t *currentPlayer) {}
+static void PlayC2S_teleport_to_entity(player_t *currentPlayer) {}
+static void PlayC2S_use_item_on(player_t *currentPlayer) {}
 static void PlayC2S_use_item(player_t *currentPlayer) {}
 
-static void ConfigurationC2S_settings(player_t *currentPlayer)
+static void ConfigurationC2S_client_information(player_t *currentPlayer)
 {
-  char buf[17];
-  readString(buf, sizeof(buf));           // Locale
-  readByte();                             // View Distance
-  readVarInt();                           // Chat Mode
-  readByte();                             // Chat Colors
-  currentPlayer->skin_parts = readByte(); // Displayed Skin Parts
-  readVarInt();                           // Main Hand
-  readByte();                             // Disable Text Filter
-  readByte();                             // Allow server listing
-  currentPlayer->settings_changed_event = 1;
+    char buf[17];
+    readString(buf, sizeof(buf));           // Locale
+    readByte();                             // View Distance
+    readVarInt();                           // Chat Mode
+    readByte();                             // Chat Colors
+    currentPlayer->skin_parts = readByte(); // Displayed Skin Parts
+    readVarInt();                           // Main Hand
+    readByte();                             // Disable Text Filter
+    readByte();                             // Allow server listing
+    currentPlayer->settings_changed_event = 1;
 }
 static void ConfigurationC2S_cookie_response(player_t *currentPlayer) {}
-static void ConfigurationC2S_channel(player_t *currentPlayer) {}
-static void ConfigurationC2S_ready(player_t *currentPlayer)
+static void ConfigurationC2S_custom_payload(player_t *currentPlayer) {}
+static void ConfigurationC2S_finish_configuration(player_t *currentPlayer)
 {
-  currentPlayer->active = 1;
-  currentPlayer->spawn_event = 1;
-  currentPlayer->handshake_status = 4;
+    currentPlayer->active = 1;
+    currentPlayer->spawn_event = 1;
+    currentPlayer->handshake_status = 4;
 }
-static void ConfigurationC2S_heartbeat(player_t *currentPlayer) {}
+static void ConfigurationC2S_keep_alive(player_t *currentPlayer) {}
 static void ConfigurationC2S_pong(player_t *currentPlayer) {}
-static void ConfigurationC2S_resourcepack(player_t *currentPlayer) {}
-static void ConfigurationC2S_known_pack(player_t *currentPlayer)
+static void ConfigurationC2S_resource_pack(player_t *currentPlayer) {}
+static void ConfigurationC2S_select_known_packs(player_t *currentPlayer)
 {
-  currentPlayer->configuration_known_packs_ack_event = 1;
+    currentPlayer->configuration_known_packs_ack_event = 1;
 }
 
-void (*c2s_play_1_20_5_1_21_1[])(player_t *currentPlayer) = {
-    &PlayC2S_confirm_teleport,
-    &PlayC2S_block_nbt,
-    &PlayC2S_difficulty,
-    &PlayC2S_message_acknowledgement,
-    &PlayC2S_command,
-    &PlayC2S_signed_command,
-    &PlayC2S_signed_chat_message,
-    &PlayC2S_session_data,
-    &PlayC2S_next_chunk_batch,
-    &PlayC2S_client_action,
-    &PlayC2S_settings,
-    &PlayC2S_command_suggestions,
-    &PlayC2S_reconfigure,
-    &PlayC2S_container_button,
-    &PlayC2S_container_click,
-    &PlayC2S_close_container,
-    &PlayC2S_crafter_slot_lock,
-    &PlayC2S_cookie_response,
-    &PlayC2S_channel,
-    &PlayC2S_debug_sample_subscription,
-    &PlayC2S_book,
-    &PlayC2S_entity_nbt,
-    &PlayC2S_entity_interact,
-    &PlayC2S_generate_structure,
-    &PlayC2S_heartbeat,
-    &PlayC2S_lock_difficulty,
-    &PlayC2S_position,
-    &PlayC2S_position_rotation,
-    &PlayC2S_rotation,
-    &PlayC2S_ground_change,
-    &PlayC2S_move_vehicle,
-    &PlayC2S_steer_boat,
-    &PlayC2S_item_pick,
-    &PlayC2S_ping,
-    &PlayC2S_crafting_recipe,
-    &PlayC2S_toggle_fly,
-    &PlayC2S_player_action,
-    &PlayC2S_entity_action,
-    &PlayC2S_vehicle_input,
-    &PlayC2S_pong,
-    &PlayC2S_displayed_recipe,
-    &PlayC2S_recipe_book,
-    &PlayC2S_anvil_item_name,
-    &PlayC2S_resourcepack,
-    &PlayC2S_advancement_tab,
-    &PlayC2S_trade,
-    &PlayC2S_beacon_effect,
-    &PlayC2S_hotbar_slot,
-    &PlayC2S_command_block,
-    &PlayC2S_minecart_command_block,
-    &PlayC2S_item_stack_create,
-    &PlayC2S_jigsaw_block,
-    &PlayC2S_structure_block,
-    &PlayC2S_sign_text,
-    &PlayC2S_swing_arm,
-    &PlayC2S_entity_spectate,
-    &PlayC2S_block_interact,
-    &PlayC2S_use_item,
+void (*c2s_play_1_21_4[])(player_t *currentPlayer) = {
+    &PlayC2S_accept_teleportation,         // 0x00
+    &PlayC2S_block_entity_tag_query,       // 0x01
+    &PlayC2S_bundle_item_selected,         // 0x02
+    &PlayC2S_change_difficulty,            // 0x03
+    &PlayC2S_chat_ack,                     // 0x04
+    &PlayC2S_chat_command,                 // 0x05
+    &PlayC2S_chat_command_signed,          // 0x06
+    &PlayC2S_chat,                         // 0x07
+    &PlayC2S_chat_session_update,          // 0x08
+    &PlayC2S_chunk_batch_received,         // 0x09
+    &PlayC2S_client_command,               // 0x0A
+    &PlayC2S_client_tick_end,              // 0x0B
+    &PlayC2S_client_information,           // 0x0C
+    &PlayC2S_command_suggestion,           // 0x0D
+    &PlayC2S_configuration_acknowledged,   // 0x0E
+    &PlayC2S_container_button_click,       // 0x0F
+    &PlayC2S_container_click,              // 0x10
+    &PlayC2S_container_close,              // 0x11
+    &PlayC2S_container_slot_state_changed, // 0x12
+    &PlayC2S_cookie_response,              // 0x13
+    &PlayC2S_custom_payload,               // 0x14
+    &PlayC2S_debug_sample_subscription,    // 0x15
+    &PlayC2S_edit_book,                    // 0x16
+    &PlayC2S_entity_tag_query,             // 0x17
+    &PlayC2S_interact,                     // 0x18
+    &PlayC2S_jigsaw_generate,              // 0x19
+    &PlayC2S_keep_alive,                   // 0x1A
+    &PlayC2S_lock_difficulty,              // 0x1B
+    &PlayC2S_move_player_pos,              // 0x1C
+    &PlayC2S_move_player_pos_rot,          // 0x1D
+    &PlayC2S_move_player_rot,              // 0x1E
+    &PlayC2S_move_player_status_only,      // 0x1F
+    &PlayC2S_move_vehicle,                 // 0x20
+    &PlayC2S_paddle_boat,                  // 0x21
+    &PlayC2S_pick_item_from_block,         // 0x22
+    &PlayC2S_pick_item_from_entity,        // 0x23
+    &PlayC2S_ping_request,                 // 0x24
+    &PlayC2S_place_recipe,                 // 0x25
+    &PlayC2S_player_abilities,             // 0x26
+    &PlayC2S_player_action,                // 0x27
+    &PlayC2S_player_command,               // 0x28
+    &PlayC2S_player_input,                 // 0x29
+    &PlayC2S_player_loaded,                // 0x2A
+    &PlayC2S_pong,                         // 0x2B
+    &PlayC2S_recipe_book_change_settings,  // 0x2C
+    &PlayC2S_recipe_book_seen_recipe,      // 0x2D
+    &PlayC2S_rename_item,                  // 0x2E
+    &PlayC2S_resource_pack,                // 0x2F
+    &PlayC2S_seen_advancements,            // 0x30
+    &PlayC2S_select_trade,                 // 0x31
+    &PlayC2S_set_beacon,                   // 0x32
+    &PlayC2S_set_carried_item,             // 0x33
+    &PlayC2S_set_command_block,            // 0x34
+    &PlayC2S_set_command_minecart,         // 0x35
+    &PlayC2S_set_creative_mode_slot,       // 0x36
+    &PlayC2S_set_jigsaw_block,             // 0x37
+    &PlayC2S_set_structure_block,          // 0x38
+    &PlayC2S_sign_update,                  // 0x39
+    &PlayC2S_swing,                        // 0x3A
+    &PlayC2S_teleport_to_entity,           // 0x3B
+    &PlayC2S_use_item_on,                  // 0x3C
+    &PlayC2S_use_item                      // 0x3D
 };
-void (*c2s_configuration_1_20_5_1_21_1[])(player_t *currentPlayer) = {
-    &ConfigurationC2S_settings,
-    &ConfigurationC2S_cookie_response,
-    &ConfigurationC2S_channel,
-    &ConfigurationC2S_ready,
-    &ConfigurationC2S_heartbeat,
-    &ConfigurationC2S_pong,
-    &ConfigurationC2S_resourcepack,
-    &ConfigurationC2S_known_pack};
+void (*c2s_configuration_1_21_4[])(player_t *currentPlayer) = {
+    &ConfigurationC2S_client_information,   // 0x00
+    &ConfigurationC2S_cookie_response,      // 0x01
+    &ConfigurationC2S_custom_payload,       // 0x02
+    &ConfigurationC2S_finish_configuration, // 0x03
+    &ConfigurationC2S_keep_alive,           // 0x04
+    &ConfigurationC2S_pong,                 // 0x05
+    &ConfigurationC2S_resource_pack,        // 0x06
+    &ConfigurationC2S_select_known_packs    // 0x07
+};
