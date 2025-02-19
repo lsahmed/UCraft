@@ -173,7 +173,7 @@ static void startGame(size_t playerCount)
         gameData.startDelay = 1000;
     }
 }
-static playerFellDown(player_t *currentPlayer)
+static resetPlayer(player_t *currentPlayer)
 {
     currentPlayer->gamePlayerData.isPlaying = 0;
     currentPlayer->gamePlayerData.isSpectating = 1;
@@ -185,7 +185,6 @@ static playerFellDown(player_t *currentPlayer)
     PlayS2Cteleport(currentPlayer, gameData.centerX, gameData.centerY + 2, gameData.centerZ);
     currentPlayer->teleport = 1;
     updatePlayerCount();
-    printChatFormatted("§a%s §ffell down (%ld/%ld)", currentPlayer->name, gameData.players, gameData.initalPlayers);
 }
 // fired when the server is about to start
 void gamePreload()
@@ -224,7 +223,7 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
     int32_t maxDistance = GAME_RADIUS + 10;
     if (currentPlayer->x > maxDistance || currentPlayer->x < -maxDistance || currentPlayer->y > maxDistance || currentPlayer->y < -maxDistance || currentPlayer->z > maxDistance || currentPlayer->z < -maxDistance)
     {
-        playerFellDown(currentPlayer);
+        resetPlayer(currentPlayer);
     }
     // Game is started
     if (gameData.isStarted)
@@ -310,7 +309,8 @@ void gamePlayerGlobalTick(player_t *currentPlayer)
             // check if the player fell down
             if (currentPlayer->y < gameData.centerY - 4)
             {
-                playerFellDown(currentPlayer);
+                resetPlayer(currentPlayer);
+                printChatFormatted("§a%s §ffell down (%ld/%ld)", currentPlayer->name, gameData.players, gameData.initalPlayers);
             }
         }
     }
