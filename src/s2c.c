@@ -279,10 +279,7 @@ void PlayS2Cchunk(player_t *currentPlayer, int32_t x, int32_t z)
   sendPlayPacketHeader(S2C_PLAY_LEVEL_CHUNK_WITH_LIGHT);
   sendInt(x);
   sendInt(z);
-  // NBT start
-  sendByte(0x0a);
-  sendByte(0);
-  //  NBT end
+  sendVarInt(0); // Heightmap count
   // switch to another buffer so the size can be appended later on
   sendSwitchToLocalBuffer(block_entity, sizeof(block_entity));
   // this part of the chunk depends on the height and logical_height from the
@@ -606,6 +603,55 @@ void ConfigurationS2Cregistry()
   sendString("alban", -1);
   sendByte(0);
   sendDone();
+
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
+  sendString("pig_variant", -1);
+  sendVarInt(1);
+  sendString("cold", -1);
+  sendByte(0);
+  sendDone();
+
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
+  sendString("cat_variant", -1);
+  sendVarInt(1);
+  sendString("black", -1);
+  sendByte(0);
+  sendDone();
+
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
+  sendString("chicken_variant", -1);
+  sendVarInt(1);
+  sendString("cold", -1);
+  sendByte(0);
+  sendDone();
+
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
+  sendString("cow_variant", -1);
+  sendVarInt(1);
+  sendString("cold", -1);
+  sendByte(0);
+  sendDone();
+
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
+  sendString("frog_variant", -1);
+  sendVarInt(1);
+  sendString("cold", -1);
+  sendByte(0);
+  sendDone();
+
+  sendStart();
+  sendConfigurationPacketHeader(S2C_CONFIGURATION_REGISTRY_DATA);
+  sendString("wolf_sound_variant", -1);
+  sendVarInt(1);
+  sendString("angry", -1);
+  sendByte(0);
+  sendDone();
+
 }
 void ConfigurationS2Cready()
 {
