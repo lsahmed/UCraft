@@ -173,7 +173,7 @@ static void startGame(size_t playerCount)
         gameData.startDelay = 1000;
     }
 }
-static resetPlayer(player_t *currentPlayer)
+static void resetPlayer(player_t *currentPlayer)
 {
     currentPlayer->gamePlayerData.isPlaying = 0;
     currentPlayer->gamePlayerData.isSpectating = 1;
