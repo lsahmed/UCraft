@@ -258,11 +258,11 @@ size_t sendData(uint8_t *data, size_t buffersize)
     if (r < 0)
     {
       // the issue with EAGAIN is that if we loop over it again with no delay, it will not work so for now just simply dispatch the packet later
-      if (errno == EAGAIN)
+      if (errno == EAGAIN || errno == 0)
       {
         if (sendPacketVars.player->packet)
         {
-          printl(LOG_ERROR, "Packet already exists! try again later\n");
+          printl(LOG_WARN, "Packet already exists! try again later\n");
           return totalSent;
         }
         // allocate the packet

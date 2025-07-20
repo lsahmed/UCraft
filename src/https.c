@@ -11,10 +11,8 @@
 #include "mbedtls/sha1.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/debug.h"
-#include "mbedtls/net_sockets.h"
 #include "lwjson/lwjson.h"
 #include "wrapper.h"
-
 static httpsData_t httpsData;
 #ifdef MBEDTLS_DEBUG_C
 static void sslDebug(void *ctx, int level, const char *file, int line, const char *str)
@@ -22,6 +20,49 @@ static void sslDebug(void *ctx, int level, const char *file, int line, const cha
     printl(LOG_INFO, "%s:%04d: %s", file, line, str);
 }
 #endif /*MBEDTLS_DEBUG_C*/
+//TODO: Add checks if the socket is nonblocking or not as the implementation for net_would_block is missing
+static int mbedtls_net_recv(void *ctx, unsigned char *buf, size_t len)
+{
+    int ret;
+    int fd = ((mbedtls_net_context *)ctx)->fd;
+    ret = (int)U_recv(fd, buf, len, MSG_NOSIGNAL);
+    if (ret < 0)
+    {
+        if (errno == EPIPE || errno == ECONNRESET)
+        {
+            return (MBEDTLS_ERR_NET_CONN_RESET);
+        }
+
+        if (errno == EINTR)
+        {
+            return (MBEDTLS_ERR_SSL_WANT_READ);
+        }
+
+        return (MBEDTLS_ERR_SSL_WANT_READ);
+    }
+    return ret;
+}
+static int mbedtls_net_send(void *ctx, const unsigned char *buf, size_t len)
+{
+    int ret;
+    int fd = ((mbedtls_net_context *)ctx)->fd;
+    ret = (int)U_send(fd, buf, len, MSG_NOSIGNAL);
+    if (ret < 0)
+    {
+        if (errno == EPIPE || errno == ECONNRESET)
+        {
+            return (MBEDTLS_ERR_NET_CONN_RESET);
+        }
+
+        if (errno == EINTR)
+        {
+            return (MBEDTLS_ERR_SSL_WANT_WRITE);
+        }
+        return (MBEDTLS_ERR_SSL_WANT_WRITE);
+    }
+    return ret;
+}
+
 httpsData_t *httpsGetData()
 {
     return &httpsData;
@@ -40,19 +81,35 @@ int httpsConnect(player_t *currentPlayer, const char *hostname, const char *port
     }
     httpsData.currentPlayer = currentPlayer;
     int ret;
-    mbedtls_net_init(&httpsData.net);
     mbedtls_ssl_init(&httpsData.ssl);
     mbedtls_ssl_config_init(&httpsData.conf);
-    ret = mbedtls_net_connect(&httpsData.net, hostname, port, MBEDTLS_NET_PROTO_TCP);
-    if (ret != 0)
+    // connect to the server manually
+    httpsData.net.fd = U_socket(AF_INET, SOCK_STREAM, 0);
+    if (httpsData.net.fd < 0)
     {
-        printl(LOG_ERROR, "mbedtls_net_connect returned %d\n", ret);
+        printl(LOG_ERROR, "U_socket returned %d\n", httpsData.net.fd);
         return 1;
     }
-    ret = mbedtls_net_set_nonblock(&httpsData.net);
+    struct sockaddr_in server;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(atoi(port));
+    struct hostent *hostinfo = U_gethostbyname(hostname);
+    if (!hostinfo)
+    {
+        printl(LOG_ERROR, "U_gethostbyname Failed\r\n");
+        return 1;
+    }
+    server.sin_addr = *((struct in_addr *)hostinfo->h_addr);
+    ret = U_connect(httpsData.net.fd, (struct sockaddr *)&server, sizeof(server));
     if (ret != 0)
     {
-        printl(LOG_ERROR, "mbedtls_net_set_nonblock returned %d\n", ret);
+        printl(LOG_ERROR, "U_connect returned %d errno: %d\n", ret,errno);
+        return 1;
+    }
+    ret = U_setsocknonblock(httpsData.net.fd);
+    if (ret != 0)
+    {
+        printl(LOG_ERROR, "U_setsocknonblock returned %d\n", ret);
         return 1;
     }
     ret = mbedtls_ssl_config_defaults(&httpsData.conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
@@ -395,32 +452,25 @@ void httpsFreePlayer(player_t *currentPlayer)
 {
     if (currentPlayer == NULL)
     {
+        printl(LOG_ERROR, "how??? currentPlayer is NULL\n");
+        return;
+    }
+    if (httpsData.currentPlayer == NULL)
+    {
         return;
     }
     if (currentPlayer != httpsData.currentPlayer)
     {
+        printl(LOG_ERROR, "how??? currentPlayer is not the same\n");
         return;
     }
-    // TODO: make this non blocking
+    // send SSL/TLS closure notification
     int ret = 0;
-    for (int i = 0; i < 200; i++)
+    do
     {
         ret = mbedtls_ssl_close_notify(&httpsData.ssl);
-        if (ret == 0)
-        {
-            break;
-        }
-        else if (ret == MBEDTLS_ERR_SSL_WANT_WRITE)
-        {
-            continue;
-        }
-        else
-        {
-            printl(LOG_WARN, "mbedtls_ssl_close_notify returned %d\n", ret);
-            break;
-        }
-    }
-    mbedtls_net_free(&httpsData.net);
+    } while (ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+    U_close(httpsData.net.fd);
     mbedtls_ssl_free(&httpsData.ssl);
     mbedtls_ssl_config_free(&httpsData.conf);
     memset(&httpsData, 0, sizeof(httpsData_t));
@@ -428,7 +478,6 @@ void httpsFreePlayer(player_t *currentPlayer)
 }
 void httpsCleanup()
 {
-    mbedtls_net_free(&httpsData.net);
     mbedtls_ssl_free(&httpsData.ssl);
     mbedtls_ssl_config_free(&httpsData.conf);
     memset(&httpsData, 0, sizeof(httpsData_t));
