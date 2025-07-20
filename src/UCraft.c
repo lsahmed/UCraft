@@ -54,7 +54,7 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
                 continue;
             }
         }
-
+        char scratch[8]; // Ping
         uint8_t cmd = readByte();
         switch (currentPlayer->handshake_status)
         {
@@ -80,7 +80,6 @@ static void c2sHandler(readPacketVars_t *readPacketValue)
                 currentPlayer->playerlist_event = 1;
                 break;
             case 0x01:
-                char scratch[8]; // Ping
                 readBuffer(scratch, 8);
                 currentPlayer->ping_event = 1;
                 break;

@@ -1,5 +1,6 @@
 #include "https.h"
 #ifdef ONLINE_MODE_AUTH
+#include <errno.h>
 #include "encryption.h"
 #include "log.h"
 #include "util.h"
@@ -21,7 +22,7 @@ static void sslDebug(void *ctx, int level, const char *file, int line, const cha
 }
 #endif /*MBEDTLS_DEBUG_C*/
 //TODO: Add checks if the socket is nonblocking or not as the implementation for net_would_block is missing
-static int mbedtls_net_recv(void *ctx, unsigned char *buf, size_t len)
+int mbedtls_net_recv(void *ctx, unsigned char *buf, size_t len)
 {
     int ret;
     int fd = ((mbedtls_net_context *)ctx)->fd;
@@ -42,7 +43,7 @@ static int mbedtls_net_recv(void *ctx, unsigned char *buf, size_t len)
     }
     return ret;
 }
-static int mbedtls_net_send(void *ctx, const unsigned char *buf, size_t len)
+int mbedtls_net_send(void *ctx, const unsigned char *buf, size_t len)
 {
     int ret;
     int fd = ((mbedtls_net_context *)ctx)->fd;

@@ -18,4 +18,5 @@ int main(int argc, char const *argv[])
 {
   signal(SIGINT, cleanup);
   UCraftStart(&cleanup_flag);
+  return 0;
 }

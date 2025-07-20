@@ -10,6 +10,7 @@
 #define MAX_SEND_FRAGMENT_SIZE 1024 // Number of bytes to send on the wire each call
 #define SEND_PACKET_TIMEOUT 400     // Number of ticks before timing out
 #define MAX_STRING_SIZE 1024
+#define LOG_BUFFER_SIZE 1024
 #define READBUFSIZE 4096
 
 #define AUTH_HOST "sessionserver.mojang.com"

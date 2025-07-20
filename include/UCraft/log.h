@@ -3,5 +3,5 @@
 #define LOG_ERROR "ERROR"
 #define LOG_INFO "INFO"
 #define LOG_WARN "WARN"
-void printl(char *type, char *fmt, ...);
+void printl(const char *type, const char *fmt, ...);
 #endif
