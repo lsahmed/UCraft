@@ -1,4 +1,4 @@
-# CMake CI across multiple platforms + artifacts + release on tag
+# CMake CI across multiple platforms + upload only the binary + release on tag
 name: CMake on multiple platforms
 
 on:
@@ -11,6 +11,9 @@ on:
 # Needed so we can create releases
 permissions:
   contents: write
+
+env:
+  APP_NAME: UCraft
 
 jobs:
   build:
@@ -48,8 +51,8 @@ jobs:
         shell: bash
         run: |
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          # Artifact name includes OS, compiler, and build type
-          echo "artifact-name=${{ runner.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}" >> "$GITHUB_OUTPUT"
+          echo "artifact-name=${{ env.APP_NAME }}-${{ runner.os }}-${{ matrix.c_compiler }}" >> "$GITHUB_OUTPUT"
+          echo "staging-dir=${{ github.workspace }}/build/out" >> "$GITHUB_OUTPUT"
 
       - name: Configure CMake
         run: >
@@ -66,28 +69,60 @@ jobs:
         working-directory: ${{ steps.strings.outputs.build-output-dir }}
         run: ctest --build-config ${{ matrix.build_type }}
 
-      # Upload everything in the build directory
-      - name: Upload build artifacts
+      # --- Collect just the binary and rename it per platform/compiler ---
+      - name: Stage binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $buildDir = "${{ steps.strings.outputs.build-output-dir }}\src\Release"
+          $outDir   = "${{ steps.strings.outputs.staging-dir }}"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          $exe = Get-ChildItem -Path $buildDir -Filter *.exe -File | Select-Object -First 1
+          if (-not $exe) { throw "No .exe found in $buildDir" }
+          $dest = Join-Path $outDir "${{ steps.strings.outputs.artifact-name }}.exe"
+          Copy-Item $exe.FullName $dest -Force
+          Write-Host "Staged $($exe.Name) -> $dest"
+      - name: Stage binary (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_dir="${{ steps.strings.outputs.build-output-dir }}/src"
+          out_dir="${{ steps.strings.outputs.staging-dir }}"
+          mkdir -p "$out_dir"
+          # pick the first executable regular file in build/src, excluding shared libs
+          bin_path="$(find "$build_dir" -maxdepth 1 -type f -executable ! -name '*.so' | head -n 1 || true)"
+          if [[ -z "${bin_path}" ]]; then
+            echo "No executable found in $build_dir" >&2
+            exit 1
+          fi
+          dest="${out_dir}/${{ steps.strings.outputs.artifact-name }}"
+          cp -f "$bin_path" "$dest"
+          chmod +x "$dest"
+          echo "Staged $(basename "$bin_path") -> $dest"
+
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.strings.outputs.artifact-name }}
-          path: |
-            ${{ steps.strings.outputs.build-output-dir }}/**/*
-          if-no-files-found: warn
+          path: ${{ steps.strings.outputs.staging-dir }}/*
+          if-no-files-found: error
           retention-days: 7
 
   release:
-    # Only run when the ref is a tag (e.g., refs/tags/v1.2.3)
     if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download all artifacts
+      - name: Download binaries
         uses: actions/download-artifact@v4
         with:
           path: dist
-          merge-multiple: true 
+          merge-multiple: true
+
+      - name: List downloaded files (debug)
+        run: ls -la dist
 
       - name: Generate checksums
         run: |
@@ -95,7 +130,7 @@ jobs:
           find . -type f -print0 | xargs -0 sha256sum > SHA256SUMS.txt
           cd -
 
-      - name: Create GitHub Release and upload files
+      - name: Create GitHub Release and upload binaries
         uses: softprops/action-gh-release@v2
         with:
           files: |
