@@ -230,19 +230,17 @@ void PlayS2Cspawnentity(player_t *currentPlayer, EntityMetadataType type)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_ADD_ENTITY);
-  sendVarInt(currentPlayer->id);
-  sendUUID(currentPlayer->id);
-  sendVarInt(type);
-  sendDouble(currentPlayer->x);
-  sendDouble(currentPlayer->y);
-  sendDouble(currentPlayer->z);
+  sendVarInt(currentPlayer->id); //EID
+  sendUUID(currentPlayer->id); //UUID
+  sendVarInt(type); //Entity Type
+  sendDouble(0);
+  sendDouble(0);
+  sendDouble(0);
+  sendByte(0);
   sendByte(currentPlayer->npitch);
   sendByte(currentPlayer->nyaw);
   sendByte(currentPlayer->nyaw);
   sendVarInt(0);
-  sendShort(0);
-  sendShort(0);
-  sendShort(0);
   sendDone();
 }
 void PlayS2Cpositionrotation(player_t *currentPlayer, double x, double y, double z)
@@ -453,7 +451,7 @@ void PlayS2Cbossbar(player_t *currentPlayer, uint16_t uuid, int32_t action, char
   }
   sendDone();
 }
-void PlayS2Centitydata(player_t *currentPlayer, uint8_t entity, EntityDataMetadata type, State state)
+void PlayS2Centitydata(player_t *currentPlayer, uint8_t entity, EntityDataMetadata type, EntityState state)
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_SET_ENTITY_DATA);
@@ -468,7 +466,9 @@ void PlayS2Ccompassposition(player_t *currentPlayer, int32_t x, int32_t y, int32
 {
   sendStart();
   sendPlayPacketHeader(S2C_PLAY_SET_DEFAULT_SPAWN_POSITION);
+  sendString("overworld",-1);
   sendPosition(x, y, z);
+  sendFloat(0);
   sendFloat(0);
   sendDone();
 }

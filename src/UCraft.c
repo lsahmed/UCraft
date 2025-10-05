@@ -495,17 +495,12 @@ static void s2cHandler()
                 }
                 currentPlayer->swing_arm_event = 0;
             }
-            if (currentPlayer->entity_action_event)
+            if (currentPlayer->entity_action_event )
             {
-                switch (currentPlayer->entity_action_id)
-                {
-                case 0: // start sneaking
+                if(currentPlayer->entity_action_id & 0x20){
                     PlayS2Centitydata(currentPlayer, ENTITY_POSE, ENTITY_DATA_POSE, STATE_SNEAKING);
-                    break;
-                case 1: // normal standing
+                }else{
                     PlayS2Centitydata(currentPlayer, ENTITY_POSE, ENTITY_DATA_POSE, STATE_STANDING);
-                default:
-                    break;
                 }
                 currentPlayer->entity_action_event = 0;
             }

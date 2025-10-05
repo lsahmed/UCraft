@@ -22,9 +22,9 @@
 #define VIEWDISTANCE 12
 #define RESPAWNSCREEN 1
 
-#define CLIENT_VERSION "1.21.5"
-#define PROTOCOL_VERSION 770
-#define LONG_PROTOCOL_VERSION "\\u00A7c UCraft: 1.21.5"
+#define CLIENT_VERSION "1.21.9"
+#define PROTOCOL_VERSION 773
+#define LONG_PROTOCOL_VERSION "\\u00A7c UCraft: 1.21.9"
 #define MOTD "\\u00A7a\\u00A7lUCraft\\u00A7r\\u00A7l server written in C :D"
 
 // Game config
