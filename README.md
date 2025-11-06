@@ -1,6 +1,6 @@
 # Ucraft
 A minecraft server implementation written in C for machines with limited resources.
-The current server supports **1.21.9** for the client.
+The current server supports **1.21.9** for the client. (such as a smart WIFI lightbulb using the bl602 microcontroller) 
 
 NOTE: This is a weekend project so i do not recommend using this for production as this is guranteed to have bugs and the general source code quality lacks in consistency. 
 
