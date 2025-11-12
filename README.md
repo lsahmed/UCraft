@@ -1,6 +1,6 @@
 # Ucraft
 A minecraft server implementation written in C for machines with limited resources.
-The current server supports **1.21.9** for the client. (such as a smart WIFI lightbulb using the bl602 microcontroller) 
+The current server supports **1.21.9** for the client. (such as a smart WIFI lightbulb using the bl602 microcontroller. Implementation can be found [here][5]) 
 
 ### Building
 The server was built and tested on a linux machine. To build on a Windows machine, MSVC is required.
@@ -36,3 +36,4 @@ Comparing this server to the vanilla server is unfair because it lacks most, if 
 [2]:https://bixilon.de/en
 [3]:https://wiki.vg/Main_Page
 [4]:arena.png
+[5]:https://github.com/vimpop/UCraft-bl602
