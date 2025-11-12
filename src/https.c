@@ -21,7 +21,7 @@ static void sslDebug(void *ctx, int level, const char *file, int line, const cha
     printl(LOG_INFO, "%s:%04d: %s", file, line, str);
 }
 #endif /*MBEDTLS_DEBUG_C*/
-//TODO: Add checks if the socket is nonblocking or not as the implementation for net_would_block is missing
+// TODO: Add checks if the socket is nonblocking or not as the implementation for net_would_block is missing
 int mbedtls_net_recv(void *ctx, unsigned char *buf, size_t len)
 {
     int ret;
@@ -91,6 +91,12 @@ int httpsConnect(player_t *currentPlayer, const char *hostname, const char *port
         printl(LOG_ERROR, "U_socket returned %d\n", httpsData.net.fd);
         return 1;
     }
+    ret = U_setsocknonblock(httpsData.net.fd);
+    if (ret != 0)
+    {
+        printl(LOG_ERROR, "U_setsocknonblock returned %d\n", ret);
+        return 1;
+    }
     struct sockaddr_in server;
     server.sin_family = AF_INET;
     server.sin_port = htons(atoi(port));
@@ -102,15 +108,9 @@ int httpsConnect(player_t *currentPlayer, const char *hostname, const char *port
     }
     server.sin_addr = *((struct in_addr *)hostinfo->h_addr);
     ret = U_connect(httpsData.net.fd, (struct sockaddr *)&server, sizeof(server));
-    if (ret != 0)
+    if (ret != 0 && errno != 0 && errno != EINPROGRESS)
     {
-        printl(LOG_ERROR, "U_connect returned %d errno: %d\n", ret,errno);
-        return 1;
-    }
-    ret = U_setsocknonblock(httpsData.net.fd);
-    if (ret != 0)
-    {
-        printl(LOG_ERROR, "U_setsocknonblock returned %d\n", ret);
+        printl(LOG_ERROR, "U_connect returned %d errno: %s\n", ret, strerror(errno));
         return 1;
     }
     ret = mbedtls_ssl_config_defaults(&httpsData.conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
@@ -178,6 +178,7 @@ void httpsGetPlayerInfo(player_t *currentPlayer)
     ret = httpsConnect(currentPlayer, AUTH_HOST, AUTH_HOST_PORT);
     if (ret != 0)
     {
+        strncpy((char *)currentPlayer->disconnect_reason, "Internal server error!", sizeof(((player_t *)0)->disconnect_reason));
         printl(LOG_ERROR, "httpsConnect returned %d\n", ret);
         httpsFreePlayer(currentPlayer);
         currentPlayer->remove_player_event = 1;
