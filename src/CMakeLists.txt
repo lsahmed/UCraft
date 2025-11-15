@@ -9,7 +9,13 @@ else(MSVC)
     #set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/Wall ")
 endif()
 #set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "")
-target_link_libraries(${PROJECT_NAME} PRIVATE mbedtls)
+
+if(MbedTLS_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE MbedTLS::mbedtls)
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE mbedtls)
+endif()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE lwjson)
 
 if(UNIX)
