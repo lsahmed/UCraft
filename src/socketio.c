@@ -592,7 +592,7 @@ void sendUUID(uint16_t seed)
 }
 void sendUUIDString(uint16_t seed)
 {
-  static char const hexdigits_lower[16] = "0123456789abcdef";
+  static char const hexdigits_lower[] = "0123456789abcdef";
   int i;
   char stmp[38];
   for (i = 0; i < 36; i++)
